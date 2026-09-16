@@ -56,6 +56,11 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return montar(HttpStatus.UNAUTHORIZED, "Credencial inválida", ex.getMessage(), requisicao);
     }
 
+    @ExceptionHandler(ContaInativaException.class)
+    public ProblemDetail tratarContaInativa(ContaInativaException ex, HttpServletRequest requisicao) {
+        return montar(HttpStatus.FORBIDDEN, "Cadastro inativo", ex.getMessage(), requisicao);
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ProblemDetail tratarAcessoNegado(AccessDeniedException ex, HttpServletRequest requisicao) {
         return montar(HttpStatus.FORBIDDEN, "Acesso negado",
