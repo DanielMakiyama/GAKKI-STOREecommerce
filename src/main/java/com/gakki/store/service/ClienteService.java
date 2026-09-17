@@ -3,11 +3,14 @@ package com.gakki.store.service;
 import com.gakki.store.domain.Cliente;
 import com.gakki.store.domain.Usuario;
 import com.gakki.store.domain.enums.Papel;
+import com.gakki.store.dto.request.AlterarSenhaRequest;
+import com.gakki.store.dto.request.AtualizarClienteRequest;
 import com.gakki.store.dto.request.RegistrarClienteRequest;
 import com.gakki.store.dto.response.ClienteResponse;
 import com.gakki.store.dto.response.ClienteResumoResponse;
 import com.gakki.store.dto.response.PaginaResponse;
 import com.gakki.store.exception.ConflitoException;
+import com.gakki.store.exception.CredencialInvalidaException;
 import com.gakki.store.exception.RecursoNaoEncontradoException;
 import com.gakki.store.exception.RegraDeNegocioException;
 import com.gakki.store.mapper.ClienteMapper;
@@ -81,6 +84,53 @@ public class ClienteService {
         }
 
         return clienteMapper.paraResponse(cliente);
+    }
+
+    /**
+     * RF0022 — alteração dos dados cadastrais.
+     *
+     * <p>Não precisa de {@code save()}: dentro de uma transação, o
+     * Hibernate detecta a mudança na entidade gerenciada e emite o
+     * UPDATE no commit. Chamar {@code save()} aqui não erraria, mas
+     * sugeriria que sem ele nada seria gravado.
+     *
+     * <p>E-mail e CPF não entram: o DTO não os tem, então não há como
+     * alterá-los por este caminho nem por engano.
+     */
+    @Transactional
+    public ClienteResponse atualizar(String email, AtualizarClienteRequest requisicao) {
+        Cliente cliente = clienteRepository.findByUsuarioEmail(email)
+                .orElseThrow(() -> new RecursoNaoEncontradoException(
+                        "Nenhum cadastro de cliente associado a este usuário."));
+
+        clienteMapper.aplicar(requisicao, cliente);
+        return clienteMapper.paraResponse(cliente);
+    }
+
+    /**
+     * RF0028 — alteração isolada de senha.
+     *
+     * <p>Exige a senha atual: sem isso, um token roubado permitiria
+     * trocar a senha e tomar a conta em definitivo. A senha atual
+     * errada devolve 401, não 400 — o problema é a credencial, não o
+     * formato do pedido.
+     */
+    @Transactional
+    public void alterarSenha(String email, AlterarSenhaRequest requisicao) {
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado."));
+
+        if (!passwordEncoder.matches(requisicao.senhaAtual(), usuario.getSenha())) {
+            throw new CredencialInvalidaException("A senha atual está incorreta.");
+        }
+
+        // RNF0032 — confirmação em dupla digitação.
+        if (!requisicao.novaSenha().equals(requisicao.confirmacaoNovaSenha())) {
+            throw new RegraDeNegocioException("A confirmação da nova senha não confere.");
+        }
+
+        // RNF0033 — gravada com hash, nunca em texto claro.
+        usuario.setSenha(passwordEncoder.encode(requisicao.novaSenha()));
     }
 
     /**

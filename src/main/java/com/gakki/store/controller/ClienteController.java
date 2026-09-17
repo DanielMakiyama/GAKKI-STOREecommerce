@@ -1,10 +1,13 @@
 package com.gakki.store.controller;
 
+import com.gakki.store.dto.request.AlterarSenhaRequest;
+import com.gakki.store.dto.request.AtualizarClienteRequest;
 import com.gakki.store.dto.response.ClienteResponse;
 import com.gakki.store.dto.response.ClienteResumoResponse;
 import com.gakki.store.dto.response.PaginaResponse;
 import com.gakki.store.security.UsuarioAutenticado;
 import com.gakki.store.service.ClienteService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -13,7 +16,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -35,6 +41,30 @@ public class ClienteController {
     @GetMapping("/me")
     public ResponseEntity<ClienteResponse> meuPerfil(@AuthenticationPrincipal UsuarioAutenticado usuario) {
         return ResponseEntity.ok(clienteService.buscarPorEmail(usuario.getUsername()));
+    }
+
+    /** RF0022 — o cliente altera os próprios dados cadastrais. */
+    @PutMapping("/me")
+    public ResponseEntity<ClienteResponse> alterarMeuCadastro(
+            @AuthenticationPrincipal UsuarioAutenticado usuario,
+            @Valid @RequestBody AtualizarClienteRequest requisicao) {
+
+        return ResponseEntity.ok(clienteService.atualizar(usuario.getUsername(), requisicao));
+    }
+
+    /**
+     * RF0028 — alteração isolada de senha.
+     *
+     * <p>Responde 204 sem corpo: não há nada de útil para devolver, e
+     * ecoar qualquer coisa relacionada a senha é risco desnecessário.
+     */
+    @PatchMapping("/me/senha")
+    public ResponseEntity<Void> alterarMinhaSenha(
+            @AuthenticationPrincipal UsuarioAutenticado usuario,
+            @Valid @RequestBody AlterarSenhaRequest requisicao) {
+
+        clienteService.alterarSenha(usuario.getUsername(), requisicao);
+        return ResponseEntity.noContent().build();
     }
 
     /**
