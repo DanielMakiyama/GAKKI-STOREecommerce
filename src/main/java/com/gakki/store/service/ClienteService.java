@@ -176,6 +176,52 @@ public class ClienteService {
     }
 
     /**
+     * RF0023 — inativação do cadastro. <b>Nunca exclusão.</b>
+     *
+     * <p>O registro do cliente permanece no banco com todo o histórico;
+     * o que muda é a flag {@code ativo} do usuário. A consequência
+     * prática vem do Spring Security, que consulta
+     * {@code UsuarioAutenticado.isEnabled()} e passa a recusar o login.
+     *
+     * <p>É a distinção que o enunciado pede: endereço e cartão são
+     * excluídos de verdade (DELETE); cliente é inativado.
+     *
+     * <p>Idempotente de propósito — inativar um cadastro já inativo
+     * devolve 204, porque o estado desejado pelo chamador já vale. PATCH
+     * repetido não deve virar erro.
+     */
+    @Transactional
+    public void inativar(Long clienteId) {
+        buscarEntidade(clienteId).getUsuario().setAtivo(false);
+    }
+
+    /** RF0023 — reativação pelo administrador. */
+    @Transactional
+    public void ativar(Long clienteId) {
+        buscarEntidade(clienteId).getUsuario().setAtivo(true);
+    }
+
+    /**
+     * O próprio cliente encerra a conta.
+     *
+     * <p>Mesma operação da inativação administrativa — o cadastro
+     * continua no banco. O que difere é quem manda: aqui o id vem do
+     * token, não da URL.
+     */
+    @Transactional
+    public void inativarPropriaConta(String email) {
+        Cliente cliente = clienteRepository.findByUsuarioEmail(email)
+                .orElseThrow(() -> new RecursoNaoEncontradoException(
+                        "Nenhum cadastro de cliente associado a este usuário."));
+        cliente.getUsuario().setAtivo(false);
+    }
+
+    private Cliente buscarEntidade(Long clienteId) {
+        return clienteRepository.findWithUsuarioById(clienteId)
+                .orElseThrow(() -> RecursoNaoEncontradoException.cliente(clienteId));
+    }
+
+    /**
      * RNF0035 — código único no formato CLI-0001.
      *
      * <p>O número vem de uma sequence do PostgreSQL. Um contador em

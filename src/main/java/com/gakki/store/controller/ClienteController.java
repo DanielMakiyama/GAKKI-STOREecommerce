@@ -97,4 +97,35 @@ public class ClienteController {
     public ResponseEntity<ClienteResponse> buscarPorId(@PathVariable Long id) {
         return ResponseEntity.ok(clienteService.buscarPorId(id));
     }
+
+    /**
+     * RF0023 — o cliente encerra a própria conta.
+     *
+     * <p>Note que não existe {@code DELETE /clientes/me}. A ausência do
+     * verbo é intencional: o cadastro não é excluído, e um endpoint
+     * chamado DELETE sugeriria o contrário.
+     */
+    @PatchMapping("/me/inativar")
+    public ResponseEntity<Void> inativarMinhaConta(
+            @AuthenticationPrincipal UsuarioAutenticado usuario) {
+
+        clienteService.inativarPropriaConta(usuario.getUsername());
+        return ResponseEntity.noContent().build();
+    }
+
+    /** RF0023 — inativação pelo administrador. */
+    @PatchMapping("/{id}/inativar")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> inativar(@PathVariable Long id) {
+        clienteService.inativar(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** RF0023 — reativação pelo administrador. */
+    @PatchMapping("/{id}/ativar")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> ativar(@PathVariable Long id) {
+        clienteService.ativar(id);
+        return ResponseEntity.noContent().build();
+    }
 }
