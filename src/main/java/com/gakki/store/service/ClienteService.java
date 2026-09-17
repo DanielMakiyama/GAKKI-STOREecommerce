@@ -5,12 +5,18 @@ import com.gakki.store.domain.Usuario;
 import com.gakki.store.domain.enums.Papel;
 import com.gakki.store.dto.request.RegistrarClienteRequest;
 import com.gakki.store.dto.response.ClienteResponse;
+import com.gakki.store.dto.response.ClienteResumoResponse;
+import com.gakki.store.dto.response.PaginaResponse;
 import com.gakki.store.exception.ConflitoException;
+import com.gakki.store.exception.RecursoNaoEncontradoException;
 import com.gakki.store.exception.RegraDeNegocioException;
 import com.gakki.store.mapper.ClienteMapper;
 import com.gakki.store.repository.ClienteRepository;
 import com.gakki.store.repository.UsuarioRepository;
+import com.gakki.store.repository.spec.ClienteSpecification;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -75,6 +81,48 @@ public class ClienteService {
         }
 
         return clienteMapper.paraResponse(cliente);
+    }
+
+    /**
+     * RF0024 — consulta do próprio cadastro pelo cliente autenticado.
+     *
+     * <p>A busca é pelo e-mail que veio no token, e não por um id na
+     * URL. É o que impede um cliente pedir o cadastro de outro: não há
+     * parâmetro para manipular.
+     */
+    @Transactional(readOnly = true)
+    public ClienteResponse buscarPorEmail(String email) {
+        Cliente cliente = clienteRepository.findByUsuarioEmail(email)
+                .orElseThrow(() -> new RecursoNaoEncontradoException(
+                        "Nenhum cadastro de cliente associado a este usuário."));
+        return clienteMapper.paraResponse(cliente);
+    }
+
+    /** RF0024 — consulta administrativa de um cliente específico. */
+    @Transactional(readOnly = true)
+    public ClienteResponse buscarPorId(Long id) {
+        Cliente cliente = clienteRepository.findWithUsuarioById(id)
+                .orElseThrow(() -> RecursoNaoEncontradoException.cliente(id));
+        return clienteMapper.paraResponse(cliente);
+    }
+
+    /**
+     * RF0024 — consulta por qualquer combinação de filtros.
+     *
+     * <p>Paginada sempre. Uma listagem sem limite funciona com cinco
+     * clientes e derruba a tela com cinco mil.
+     */
+    @Transactional(readOnly = true)
+    public PaginaResponse<ClienteResumoResponse> listar(String nome,
+                                                        String email,
+                                                        String cpf,
+                                                        String codigo,
+                                                        Boolean ativo,
+                                                        Pageable paginacao) {
+        Page<ClienteResumoResponse> pagina = clienteRepository
+                .findAll(ClienteSpecification.comFiltros(nome, email, cpf, codigo, ativo), paginacao)
+                .map(clienteMapper::paraResumo);
+        return PaginaResponse.de(pagina);
     }
 
     /**
