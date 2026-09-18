@@ -58,18 +58,17 @@ class RF0023InativarClienteTest extends BaseE2ETest {
     void inativaSemExcluir() {
         entrarComoAdministrador();
 
-        assertThat(textoDe(PaginaAdmin.statusDoCliente(idDoCliente))).isEqualTo("Ativo");
+        assertThat(textoDe(PaginaAdmin.statusDoCliente(idDoCliente))).isEqualToIgnoringCase("Ativo");
 
         clicar(PaginaAdmin.botaoDeStatus(idDoCliente));
 
         // A MESMA linha continua na tabela, agora como inativa. É esta
         // asserção que separa inativar de excluir: numa exclusão, a
         // linha não existiria mais para ser verificada.
-        espera.until(navegador ->
-                "Inativo".equals(navegador.findElement(PaginaAdmin.statusDoCliente(idDoCliente)).getText()));
+        esperarStatus("Inativo");
 
         assertThat(navegador.findElements(PaginaAdmin.linhaDoCliente(idDoCliente))).hasSize(1);
-        assertThat(textoDe(PaginaAdmin.botaoDeStatus(idDoCliente))).isEqualTo("Ativar");
+        assertThat(textoDe(PaginaAdmin.botaoDeStatus(idDoCliente))).isEqualToIgnoringCase("Ativar");
     }
 
     @Test
@@ -93,16 +92,28 @@ class RF0023InativarClienteTest extends BaseE2ETest {
         ApiDeApoio.inativar(tokenAdmin, idDoCliente);
 
         entrarComoAdministrador();
-        assertThat(textoDe(PaginaAdmin.statusDoCliente(idDoCliente))).isEqualTo("Inativo");
+        assertThat(textoDe(PaginaAdmin.statusDoCliente(idDoCliente))).isEqualToIgnoringCase("Inativo");
 
         clicar(PaginaAdmin.botaoDeStatus(idDoCliente));
-        espera.until(navegador ->
-                "Ativo".equals(navegador.findElement(PaginaAdmin.statusDoCliente(idDoCliente)).getText()));
+        esperarStatus("Ativo");
 
         // E o acesso volta: o cartão de cliente entra normalmente.
         abrir(PaginaLogin.CAMINHO);
         clicar(PaginaLogin.CARTAO_CLIENTE);
         esperarUrlConter("/catalogo");
+    }
+
+    /**
+     * Espera o selo de status mudar.
+     *
+     * <p>Comparação insensível a maiúsculas porque o CSS do selo aplica
+     * {@code text-transform: uppercase}, e o {@code getText()} do
+     * Selenium devolve o texto como ele aparece na tela — "ATIVO", e não
+     * "Ativo" como está no JSX.
+     */
+    private void esperarStatus(String esperado) {
+        espera.until(nav ->
+                esperado.equalsIgnoreCase(nav.findElement(PaginaAdmin.statusDoCliente(idDoCliente)).getText()));
     }
 
     private void entrarComoAdministrador() {

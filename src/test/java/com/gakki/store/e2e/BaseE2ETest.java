@@ -1,14 +1,17 @@
 package com.gakki.store.e2e;
 
+import com.gakki.store.e2e.acoes.FluxoDeCadastro;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.openqa.selenium.By;
+import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.Select;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.time.Duration;
@@ -92,7 +95,54 @@ public abstract class BaseE2ETest {
         return esperarPor(seletor).getText();
     }
 
+    protected void selecionarPorValor(By seletor, String valor) {
+        new Select(esperarPor(seletor)).selectByValue(valor);
+    }
+
+    /**
+     * Deixa a caixa de seleção no estado pedido.
+     *
+     * <p>Clicar direto <b>alterna</b>: um {@code click()} numa caixa já
+     * marcada a desmarca. Como o formulário de endereço nasce com
+     * "entrega" marcada e "cobrança" não, um teste que só clicasse
+     * produziria estados diferentes conforme o campo — e falharia por
+     * motivo nenhum.
+     */
+    protected void marcarCaixa(By seletor, boolean marcada) {
+        WebElement caixa = esperarPor(seletor);
+        if (caixa.isSelected() != marcada) {
+            caixa.click();
+        }
+    }
+
+    /** Valor de um atributo HTML — usado para ler os {@code data-*}. */
+    protected String atributoDe(By seletor, String atributo) {
+        return esperarPor(seletor).getDomAttribute(atributo);
+    }
+
+    protected void esperarQuantidade(By seletor, int quantidade) {
+        espera.until(ExpectedConditions.numberOfElementsToBe(seletor, quantidade));
+    }
+
+    /**
+     * Substitui o conteúdo de um campo que já vem preenchido.
+     *
+     * <p>Seleciona tudo e digita por cima, em vez de {@code clear()}: num
+     * campo controlado pelo React, o {@code clear()} zera o DOM sem
+     * passar pelo {@code onChange}, e o próximo render pode devolver o
+     * valor antigo. O Ctrl+A seguido de digitação é uma edição normal,
+     * indistinguível da que uma pessoa faria.
+     */
+    protected void substituir(By seletor, String valor) {
+        esperarPor(seletor).sendKeys(Keys.chord(Keys.CONTROL, "a"), valor);
+    }
+
     protected void esperarUrlConter(String trecho) {
         espera.until(ExpectedConditions.urlContains(trecho));
+    }
+
+    /** Fluxo de cadastro ligado ao navegador desta execução. */
+    protected FluxoDeCadastro cadastro() {
+        return new FluxoDeCadastro(navegador, espera, URL_BASE);
     }
 }
