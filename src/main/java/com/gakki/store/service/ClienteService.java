@@ -6,8 +6,10 @@ import com.gakki.store.domain.enums.Papel;
 import com.gakki.store.dto.request.AlterarSenhaRequest;
 import com.gakki.store.dto.request.AtualizarClienteRequest;
 import com.gakki.store.dto.request.RegistrarClienteRequest;
+import com.gakki.store.dto.response.CadastroAtualizadoResponse;
 import com.gakki.store.dto.response.ClienteResponse;
 import com.gakki.store.dto.response.ClienteResumoResponse;
+import com.gakki.store.dto.response.LoginResponse;
 import com.gakki.store.dto.response.PaginaResponse;
 import com.gakki.store.exception.ConflitoException;
 import com.gakki.store.exception.CredencialInvalidaException;
@@ -37,6 +39,7 @@ public class ClienteService {
     private final ClienteRepository clienteRepository;
     private final EnderecoService enderecoService;
     private final CartaoService cartaoService;
+    private final AuthService authService;
     private final ClienteMapper clienteMapper;
     private final PasswordEncoder passwordEncoder;
 
@@ -94,17 +97,48 @@ public class ClienteService {
      * UPDATE no commit. Chamar {@code save()} aqui não erraria, mas
      * sugeriria que sem ele nada seria gravado.
      *
-     * <p>E-mail e CPF não entram: o DTO não os tem, então não há como
-     * alterá-los por este caminho nem por engano.
+     * <p>E-mail e CPF são alteráveis, e cada um traz uma consequência
+     * tratada aqui: os dois são únicos no banco, então repetir o de
+     * outro cadastro devolve 409; e o e-mail é o {@code subject} do JWT,
+     * então trocá-lo mata o token que o cliente tem na mão. Sem emitir
+     * uma sessão nova, a tela levaria 401 logo depois de um salvamento
+     * bem-sucedido — o pior tipo de erro, porque parece aleatório.
+     *
+     * <p>A comparação é sempre contra o valor atual: reenviar o próprio
+     * e-mail não pode ser tratado como duplicidade.
      */
     @Transactional
-    public ClienteResponse atualizar(String email, AtualizarClienteRequest requisicao) {
+    public CadastroAtualizadoResponse atualizar(String email, AtualizarClienteRequest requisicao) {
         Cliente cliente = clienteRepository.findByUsuarioEmail(email)
                 .orElseThrow(() -> new RecursoNaoEncontradoException(
                         "Nenhum cadastro de cliente associado a este usuário."));
+        Usuario usuario = cliente.getUsuario();
 
+        String novoEmail = normalizarEmail(requisicao.email());
+        String novoCpf = somenteDigitos(requisicao.cpf());
+
+        boolean emailMudou = !usuario.getEmail().equals(novoEmail);
+        if (emailMudou && usuarioRepository.existsByEmail(novoEmail)) {
+            throw new ConflitoException("Já existe um cadastro com este e-mail.");
+        }
+        if (!novoCpf.equals(cliente.getCpf()) && clienteRepository.existsByCpf(novoCpf)) {
+            throw new ConflitoException("Já existe um cadastro com este CPF.");
+        }
+
+        usuario.setEmail(novoEmail);
+        cliente.setCpf(novoCpf);
         clienteMapper.aplicar(requisicao, cliente);
-        return clienteMapper.paraResponse(cliente);
+
+        ClienteResponse atualizado = clienteMapper.paraResponseDoDono(cliente);
+        if (!emailMudou) {
+            return CadastroAtualizadoResponse.semNovaSessao(atualizado);
+        }
+
+        // O flush é obrigatório: a sessão nova é montada por uma consulta
+        // pelo e-mail, e sem gravar antes ela buscaria o endereço antigo.
+        usuarioRepository.flush();
+        LoginResponse sessao = authService.emitirSessao(novoEmail);
+        return new CadastroAtualizadoResponse(atualizado, sessao.token(), sessao.refreshToken());
     }
 
     /**
@@ -145,7 +179,10 @@ public class ClienteService {
         Cliente cliente = clienteRepository.findByUsuarioEmail(email)
                 .orElseThrow(() -> new RecursoNaoEncontradoException(
                         "Nenhum cadastro de cliente associado a este usuário."));
-        return clienteMapper.paraResponse(cliente);
+        // Cadastro do próprio dono: CPF por inteiro, porque a tela de
+        // perfil agora o edita (RF0022) e um campo preenchido com a
+        // máscara gravaria a máscara de volta.
+        return clienteMapper.paraResponseDoDono(cliente);
     }
 
     /** RF0024 — consulta administrativa de um cliente específico. */

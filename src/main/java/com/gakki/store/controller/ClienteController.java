@@ -2,6 +2,7 @@ package com.gakki.store.controller;
 
 import com.gakki.store.dto.request.AlterarSenhaRequest;
 import com.gakki.store.dto.request.AtualizarClienteRequest;
+import com.gakki.store.dto.response.CadastroAtualizadoResponse;
 import com.gakki.store.dto.response.ClienteResponse;
 import com.gakki.store.dto.response.ClienteResumoResponse;
 import com.gakki.store.dto.response.PaginaResponse;
@@ -43,9 +44,15 @@ public class ClienteController {
         return ResponseEntity.ok(clienteService.buscarPorEmail(usuario.getUsername()));
     }
 
-    /** RF0022 — o cliente altera os próprios dados cadastrais. */
+    /**
+     * RF0022 — o cliente altera os próprios dados cadastrais.
+     *
+     * <p>A resposta não é o cadastro puro: quando o e-mail muda, ela traz
+     * junto uma sessão nova, porque o token anterior foi emitido para um
+     * {@code subject} que deixou de existir.
+     */
     @PutMapping("/me")
-    public ResponseEntity<ClienteResponse> alterarMeuCadastro(
+    public ResponseEntity<CadastroAtualizadoResponse> alterarMeuCadastro(
             @AuthenticationPrincipal UsuarioAutenticado usuario,
             @Valid @RequestBody AtualizarClienteRequest requisicao) {
 

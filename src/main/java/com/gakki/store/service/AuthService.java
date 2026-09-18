@@ -89,6 +89,24 @@ public class AuthService {
         return montarResposta(usuario);
     }
 
+    /**
+     * Emite uma sessão nova para um usuário já identificado.
+     *
+     * <p>Sem senha: quem chama já provou a identidade de outra forma. O
+     * caso é a alteração de e-mail (RF0022) — o {@code subject} do JWT é
+     * o e-mail, então o token que o cliente tem na mão morre no instante
+     * em que ele muda, e sem isto a tela levaria um 401 logo depois de
+     * salvar com sucesso.
+     *
+     * <p>Fica no {@code AuthService} porque emitir credencial é assunto
+     * desta camada. O {@code ClienteService} pede a sessão; não monta
+     * token.
+     */
+    @Transactional(readOnly = true)
+    public LoginResponse emitirSessao(String email) {
+        return montarResposta((UsuarioAutenticado) usuarioDetailsService.loadUserByUsername(email));
+    }
+
     private LoginResponse montarResposta(UsuarioAutenticado usuario) {
         return new LoginResponse(
                 jwtService.gerarTokenDeAcesso(usuario),
