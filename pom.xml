@@ -20,6 +20,7 @@
     <properties>
         <java.version>21</java.version>
         <jjwt.version>0.12.7</jjwt.version>
+        <selenium.version>4.49.0</selenium.version>
     </properties>
 
     <dependencies>
@@ -101,6 +102,20 @@
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!--
+            Testes de aceitação pela interface.
+
+            Sem WebDriverManager: do Selenium 4.6 em diante o Selenium
+            Manager baixa e versiona o ChromeDriver sozinho, então não há
+            driver binário no repositório para ficar desatualizado.
+        -->
+        <dependency>
+            <groupId>org.seleniumhq.selenium</groupId>
+            <artifactId>selenium-java</artifactId>
+            <version>${selenium.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -130,6 +145,39 @@
                     </excludes>
                 </configuration>
             </plugin>
+
+            <!--
+                Os testes de aceitação ficam de fora do `mvn test` comum:
+                eles abrem um navegador e exigem backend, banco e front
+                no ar. Rodá-los junto faria o build falhar em qualquer
+                máquina que só queira compilar.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <excludedGroups>e2e</excludedGroups>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- mvn test -Pe2e  →  roda SOMENTE a suíte de interface. -->
+        <profile>
+            <id>e2e</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <groups>e2e</groups>
+                            <excludedGroups>nenhum</excludedGroups>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

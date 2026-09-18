@@ -1,0 +1,123 @@
+package com.gakki.store.e2e.casos;
+
+import com.gakki.store.e2e.ApiDeApoio;
+import com.gakki.store.e2e.BaseE2ETest;
+import com.gakki.store.e2e.paginas.PaginaAdmin;
+import com.gakki.store.e2e.paginas.PaginaLogin;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.openqa.selenium.NoSuchElementException;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+/**
+ * RF0023 — Inativar cadastro de cliente.
+ *
+ * <p>É o caso que o enunciado destaca: "tratamento correto da distinção
+ * entre inativação e exclusão". A prova tem duas metades, e nenhuma
+ * delas basta sozinha:
+ *
+ * <ol>
+ *   <li>Depois de inativado, o cadastro <b>continua</b> na listagem
+ *       administrativa — não foi excluído.</li>
+ *   <li>Mesmo assim, o cliente <b>não consegue mais entrar</b> — a
+ *       inativação tem efeito.</li>
+ * </ol>
+ */
+@DisplayName("RF0023 — Inativar cadastro de cliente")
+class RF0023InativarClienteTest extends BaseE2ETest {
+
+    private static final String EMAIL_CLIENTE = "cliente@gakkistore.com";
+
+    private String tokenAdmin;
+    private long idDoCliente;
+
+    @BeforeEach
+    void localizarClienteDeDemonstracao() {
+        tokenAdmin = ApiDeApoio.tokenDoAdministrador();
+        idDoCliente = ApiDeApoio.idDoCliente(tokenAdmin, EMAIL_CLIENTE);
+    }
+
+    /**
+     * Devolve o cliente de demonstração ao estado ativo.
+     *
+     * <p>Roda pela API, e não pela tela, de propósito: se o teste falhar
+     * no meio, a limpeza ainda acontece. Sem isso, uma falha deixaria o
+     * cartão "Entrar como cliente" inutilizável para todas as outras
+     * suítes.
+     */
+    @AfterEach
+    void reativarCliente() {
+        ApiDeApoio.ativar(tokenAdmin, idDoCliente);
+    }
+
+    @Test
+    @DisplayName("Inativa pelo painel e o cadastro PERMANECE na listagem")
+    void inativaSemExcluir() {
+        entrarComoAdministrador();
+
+        assertThat(textoDe(PaginaAdmin.statusDoCliente(idDoCliente))).isEqualTo("Ativo");
+
+        clicar(PaginaAdmin.botaoDeStatus(idDoCliente));
+
+        // A MESMA linha continua na tabela, agora como inativa. É esta
+        // asserção que separa inativar de excluir: numa exclusão, a
+        // linha não existiria mais para ser verificada.
+        espera.until(navegador ->
+                "Inativo".equals(navegador.findElement(PaginaAdmin.statusDoCliente(idDoCliente)).getText()));
+
+        assertThat(navegador.findElements(PaginaAdmin.linhaDoCliente(idDoCliente))).hasSize(1);
+        assertThat(textoDe(PaginaAdmin.botaoDeStatus(idDoCliente))).isEqualTo("Ativar");
+    }
+
+    @Test
+    @DisplayName("Cliente inativado não consegue autenticar")
+    void inativadoNaoEntra() {
+        // Estado preparado pela API: o que se quer testar aqui é o
+        // login, não o caminho até o botão de inativar.
+        ApiDeApoio.inativar(tokenAdmin, idDoCliente);
+
+        abrir(PaginaLogin.CAMINHO);
+        clicar(PaginaLogin.CARTAO_CLIENTE);
+
+        // A senha está correta — o que barra é o estado do cadastro.
+        assertThat(textoDe(PaginaLogin.ERRO)).containsIgnoringCase("inativo");
+        assertThat(navegador.getCurrentUrl()).contains("/login");
+    }
+
+    @Test
+    @DisplayName("Reativação pelo painel devolve o acesso ao cliente")
+    void reativacaoDevolveAcesso() {
+        ApiDeApoio.inativar(tokenAdmin, idDoCliente);
+
+        entrarComoAdministrador();
+        assertThat(textoDe(PaginaAdmin.statusDoCliente(idDoCliente))).isEqualTo("Inativo");
+
+        clicar(PaginaAdmin.botaoDeStatus(idDoCliente));
+        espera.until(navegador ->
+                "Ativo".equals(navegador.findElement(PaginaAdmin.statusDoCliente(idDoCliente)).getText()));
+
+        // E o acesso volta: o cartão de cliente entra normalmente.
+        abrir(PaginaLogin.CAMINHO);
+        clicar(PaginaLogin.CARTAO_CLIENTE);
+        esperarUrlConter("/catalogo");
+    }
+
+    private void entrarComoAdministrador() {
+        abrir(PaginaLogin.CAMINHO);
+        clicar(PaginaLogin.CARTAO_ADMIN);
+        esperarUrlConter("/admin");
+
+        clicar(PaginaAdmin.ABA_CLIENTES);
+        esperarPor(PaginaAdmin.BUSCA);
+
+        try {
+            esperarPor(PaginaAdmin.linhaDoCliente(idDoCliente));
+        } catch (NoSuchElementException e) {
+            throw new AssertionError(
+                    "Cliente de demonstração não apareceu na listagem. O seed V999 foi aplicado?", e);
+        }
+    }
+}
