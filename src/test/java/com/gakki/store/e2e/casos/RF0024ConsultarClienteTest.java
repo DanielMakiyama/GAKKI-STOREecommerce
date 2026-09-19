@@ -6,6 +6,12 @@ import com.gakki.store.e2e.paginas.PaginaAdmin;
 import com.gakki.store.e2e.paginas.PaginaLogin;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.openqa.selenium.By;
+import org.openqa.selenium.TimeoutException;
+import org.openqa.selenium.WebElement;
+
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -14,11 +20,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * <p>O requisito é literal: "todos os campos utilizados para
  * identificação do cliente podem ser utilizados como filtro, tanto de
- * forma combinada como de forma isolada". Os testes cobrem as duas
- * metades — cada campo sozinho, e a combinação.
+ * forma combinada como de forma isolada". Os testes cobrem os cinco
+ * campos isolados e a combinação.
  *
- * <p>Os cenários usam os clientes do seed V999, cujos valores estão
- * fixados no contrato:
+ * <p>Os cenários usam os clientes do seed V999, fixados no contrato:
  *
  * <ul>
  *   <li>CLI-0001 Cliente Demonstração — ativo</li>
@@ -27,28 +32,42 @@ import static org.assertj.core.api.Assertions.assertThat;
  *   <li>CLI-0004 Beatriz Lima — <b>inativo</b></li>
  * </ul>
  *
- * <p>Nenhum cenário depende da contagem total da tabela, e isso é
- * deliberado: as outras suítes cadastram clientes a cada execução, e uma
- * asserção sobre o total quebraria na segunda rodada. Os filtros aqui
- * apontam para dados que só o seed tem.
+ * <p><b>Nenhuma asserção conta linhas.</b> A primeira versão desta suíte
+ * esperava "total = 1" e quebrou: as outras suítes cadastram um cliente
+ * por teste, então a tabela cresce a cada execução e qualquer número
+ * fixo tem prazo de validade. O que se afirma aqui é <i>quem</i> aparece
+ * e <i>quem não</i> — que é o que o requisito realmente exige, e vale
+ * para um banco com quatro clientes ou quatrocentos.
  */
 @DisplayName("RF0024 — Consulta de clientes por filtro")
 class RF0024ConsultarClienteTest extends BaseE2ETest {
 
-    private static final String CODIGO_MARIA = "CLI-0002";
-    private static final String CODIGO_JOAO = "CLI-0003";
-    private static final String CODIGO_BEATRIZ = "CLI-0004";
+    private static final String DEMONSTRACAO = "CLI-0001";
+    private static final String MARIA = "CLI-0002";
+    private static final String JOAO = "CLI-0003";
+    private static final String BEATRIZ = "CLI-0004";
 
     @Test
-    @DisplayName("Filtro isolado por nome traz só quem corresponde")
+    @DisplayName("Filtro isolado por nome")
     void filtraPorNome() {
         entrarComoAdministrador();
 
-        filtrar(PaginaAdmin.BUSCA, "Maria");
+        // "Souza" e não "Maria": é o sobrenome dela no seed e não
+        // aparece em nenhum cliente criado pelas outras suítes.
+        filtrar(PaginaAdmin.BUSCA, "Souza");
 
-        esperarTotal(1);
-        assertThat(navegador.findElements(PaginaAdmin.linhaComCodigo(CODIGO_MARIA))).hasSize(1);
-        assertThat(navegador.findElements(PaginaAdmin.linhaComCodigo(CODIGO_JOAO))).isEmpty();
+        esperarListagem(MARIA, DEMONSTRACAO, JOAO, BEATRIZ);
+    }
+
+    @Test
+    @DisplayName("Filtro isolado por e-mail")
+    void filtraPorEmail() {
+        entrarComoAdministrador();
+
+        // Busca parcial: o filtro de e-mail é por conteúdo, como o de nome.
+        filtrar(PaginaAdmin.FILTRO_EMAIL, "joao.pereira");
+
+        esperarListagem(JOAO, DEMONSTRACAO, MARIA, BEATRIZ);
     }
 
     @Test
@@ -57,23 +76,21 @@ class RF0024ConsultarClienteTest extends BaseE2ETest {
         entrarComoAdministrador();
 
         // Código é comparação exata, ao contrário de nome e e-mail.
-        filtrar(PaginaAdmin.FILTRO_CODIGO, CODIGO_JOAO);
+        filtrar(PaginaAdmin.FILTRO_CODIGO, JOAO);
 
-        esperarTotal(1);
-        assertThat(navegador.findElements(PaginaAdmin.linhaComCodigo(CODIGO_JOAO))).hasSize(1);
+        esperarListagem(JOAO, DEMONSTRACAO, MARIA, BEATRIZ);
     }
 
     @Test
-    @DisplayName("Filtro isolado por CPF")
+    @DisplayName("Filtro isolado por CPF, com máscara")
     void filtraPorCpf() {
         entrarComoAdministrador();
 
-        // CPF da Maria Souza, do seed. Também é comparação exata — e o
-        // backend compara só os dígitos, então a máscara não atrapalha.
+        // CPF da Maria Souza. Comparação exata, e o backend olha só os
+        // dígitos — a máscara digitada na tela não atrapalha.
         filtrar(PaginaAdmin.FILTRO_CPF, "295.289.264-44");
 
-        esperarTotal(1);
-        assertThat(navegador.findElements(PaginaAdmin.linhaComCodigo(CODIGO_MARIA))).hasSize(1);
+        esperarListagem(MARIA, DEMONSTRACAO, JOAO, BEATRIZ);
     }
 
     @Test
@@ -87,19 +104,17 @@ class RF0024ConsultarClienteTest extends BaseE2ETest {
         // Beatriz nasce inativa no seed. Ela aparecer aqui é a outra
         // face da RF0023: inativar não exclui — o cadastro continua
         // consultável, só não autentica.
-        esperarPor(PaginaAdmin.linhaComCodigo(CODIGO_BEATRIZ));
-        assertThat(navegador.findElements(PaginaAdmin.linhaComCodigo(CODIGO_MARIA))).isEmpty();
+        esperarListagem(BEATRIZ, DEMONSTRACAO, MARIA, JOAO);
     }
 
     /**
-     * O caso que prova a combinação, e não apenas a coexistência dos
-     * campos.
+     * O caso que prova a combinação, e não a mera coexistência dos campos.
      *
      * <p>"Lima" sozinho encontra a Beatriz. "Somente ativos" sozinho
-     * encontra vários. Juntos precisam encontrar <b>nenhum</b>, porque a
-     * Beatriz está inativa. Um backend que ignorasse o segundo filtro, ou
-     * que trocasse o {@code AND} por {@code OR}, passaria nos quatro
-     * testes anteriores e falharia neste.
+     * encontra vários. Juntos precisam encontrar <b>nenhum</b>, porque ela
+     * está inativa. Um backend que ignorasse o segundo filtro, ou que
+     * trocasse o {@code AND} por {@code OR}, passaria em todos os testes
+     * anteriores e falharia neste.
      */
     @Test
     @DisplayName("Filtros combinados: nome + status se aplicam em conjunto, não em alternativa")
@@ -107,19 +122,17 @@ class RF0024ConsultarClienteTest extends BaseE2ETest {
         entrarComoAdministrador();
 
         filtrar(PaginaAdmin.BUSCA, "Lima");
-        esperarTotal(1);
-        assertThat(navegador.findElements(PaginaAdmin.linhaComCodigo(CODIGO_BEATRIZ))).hasSize(1);
+        esperarListagem(BEATRIZ, DEMONSTRACAO, MARIA, JOAO);
 
         // Mesmo nome, agora exigindo que esteja ativa.
         selecionarPorValor(PaginaAdmin.FILTRO_STATUS, "ativos");
         clicar(PaginaAdmin.BOTAO_FILTRAR);
-        esperarTotal(0);
+        esperarListagemVazia();
 
         // E, exigindo inativa, ela volta.
         selecionarPorValor(PaginaAdmin.FILTRO_STATUS, "inativos");
         clicar(PaginaAdmin.BOTAO_FILTRAR);
-        esperarTotal(1);
-        assertThat(navegador.findElements(PaginaAdmin.linhaComCodigo(CODIGO_BEATRIZ))).hasSize(1);
+        esperarListagem(BEATRIZ, DEMONSTRACAO, MARIA, JOAO);
     }
 
     /**
@@ -150,20 +163,64 @@ class RF0024ConsultarClienteTest extends BaseE2ETest {
     }
 
     /** Limpa os filtros, preenche um só e aplica. */
-    private void filtrar(org.openqa.selenium.By campo, String valor) {
+    private void filtrar(By campo, String valor) {
         clicar(PaginaAdmin.BOTAO_LIMPAR);
         preencher(campo, valor);
         clicar(PaginaAdmin.BOTAO_FILTRAR);
     }
 
     /**
-     * Espera a contagem exibida bater com a esperada.
+     * Espera a listagem conter um cadastro e não conter os outros.
      *
-     * <p>Esperar, e não conferir na hora: entre o clique em "Filtrar" e a
-     * resposta do servidor a tabela ainda mostra o resultado anterior.
+     * <p>Esperar pelas <b>duas</b> condições juntas é o que elimina a
+     * corrida: entre o clique em "Filtrar" e a resposta do servidor, a
+     * tabela ainda mostra o resultado anterior — onde o esperado já está
+     * presente, junto com todos os demais. Conferir só a presença
+     * aprovaria a tela não filtrada.
      */
-    private void esperarTotal(int esperado) {
-        espera.until(nav ->
-                String.valueOf(esperado).equals(nav.findElement(PaginaAdmin.TOTAL).getText()));
+    private void esperarListagem(String presente, String... ausentes) {
+        try {
+            espera.until(nav ->
+                    temLinha(presente)
+                            && Arrays.stream(ausentes).noneMatch(this::temLinha));
+        } catch (TimeoutException e) {
+            throw new AssertionError(diagnostico(
+                    "Esperava " + presente + " presente e " + Arrays.toString(ausentes) + " ausentes"), e);
+        }
+    }
+
+    private void esperarListagemVazia() {
+        try {
+            espera.until(nav -> nav.findElements(PaginaAdmin.LINHAS).isEmpty());
+        } catch (TimeoutException e) {
+            throw new AssertionError(diagnostico("Esperava listagem vazia"), e);
+        }
+    }
+
+    private boolean temLinha(String codigo) {
+        return !navegador.findElements(PaginaAdmin.linhaComCodigo(codigo)).isEmpty();
+    }
+
+    /**
+     * Descreve o que estava na tela quando a espera estourou.
+     *
+     * <p>Um {@code TimeoutException} cru só diz que a condição não foi
+     * satisfeita. Saber quais cadastros estavam listados, e se havia
+     * mensagem de erro, é a diferença entre diagnosticar na hora e
+     * precisar de outra execução para descobrir.
+     */
+    private String diagnostico(String esperado) {
+        String listados = navegador.findElements(PaginaAdmin.LINHAS).stream()
+                .map(linha -> linha.getDomAttribute("data-codigo"))
+                .collect(Collectors.joining(", "));
+
+        String erro = navegador.findElements(PaginaAdmin.ERRO).stream()
+                .findFirst()
+                .map(WebElement::getText)
+                .orElse("(nenhuma)");
+
+        return esperado
+                + ". Na tela: [" + listados + "]"
+                + ". Mensagem de erro exibida: " + erro;
     }
 }

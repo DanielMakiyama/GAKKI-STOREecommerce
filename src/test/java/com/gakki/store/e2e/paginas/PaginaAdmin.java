@@ -20,6 +20,7 @@ public final class PaginaAdmin {
 
     public static final By TOTAL = By.cssSelector("[data-testid='total-clientes']");
     public static final By LINHAS = By.cssSelector("tr[data-cliente]");
+    public static final By ERRO = By.cssSelector("[data-testid='erro-clientes']");
 
     private PaginaAdmin() {
     }

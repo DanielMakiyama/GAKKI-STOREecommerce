@@ -8,7 +8,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.openqa.selenium.NoSuchElementException;
+import org.openqa.selenium.TimeoutException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -117,21 +117,34 @@ class RF0023InativarClienteTest extends BaseE2ETest {
     }
 
     /**
-     * Entra no painel e garante que a linha do cliente está visível.
+     * Entra no painel, filtra pelo cliente de demonstração e espera a
+     * linha dele.
+     *
+     * <p>O filtro não é enfeite. A listagem é paginada em 50, e as
+     * outras suítes cadastram um cliente por teste — cerca de vinte por
+     * execução. Depois de algumas rodadas, o cliente de demonstração
+     * deixa de caber na primeira página e a linha simplesmente some,
+     * sem que nada esteja errado com a aplicação. Procurar antes de
+     * olhar é o que um administrador faria de qualquer forma.
      *
      * <p>A entrada em si mora no {@code BaseE2ETest}, porque a RF0024
-     * precisa dela também. O que é específico daqui é exigir a linha
-     * deste cliente — sem ela, os testes falhariam com "elemento não
-     * encontrado" em vez de dizer que o seed não foi aplicado.
+     * precisa dela também.
      */
     private void abrirPainelComOCliente() {
         entrarComoAdministrador();
 
+        preencher(PaginaAdmin.FILTRO_EMAIL, EMAIL_CLIENTE);
+        clicar(PaginaAdmin.BOTAO_FILTRAR);
+
         try {
             esperarPor(PaginaAdmin.linhaDoCliente(idDoCliente));
-        } catch (NoSuchElementException e) {
+        } catch (TimeoutException e) {
+            // TimeoutException, e nao NoSuchElementException: quem
+            // estoura e o WebDriverWait, e a versao anterior capturava
+            // a excecao errada — por isso esta mensagem nunca apareceu.
             throw new AssertionError(
-                    "Cliente de demonstração não apareceu na listagem. O seed V999 foi aplicado?", e);
+                    "Cliente de demonstração não apareceu na listagem nem filtrando por "
+                            + EMAIL_CLIENTE + ". O seed V999 foi aplicado?", e);
         }
     }
 }
