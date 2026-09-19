@@ -35,10 +35,7 @@ class RF0026EnderecosClienteTest extends BaseE2ETest {
 
     @BeforeEach
     void cadastrarClienteEAbrirPerfil() {
-        cadastro().registrarClienteNovo();
-
-        abrir(PaginaPerfil.CAMINHO);
-        esperarPor(PaginaPerfil.SECAO_ENDERECOS);
+        clienteNovoNoPerfil();
 
         // Ponto de partida de todos os testes: um endereço só.
         esperarQuantidade(PaginaPerfil.ENDERECOS, 1);

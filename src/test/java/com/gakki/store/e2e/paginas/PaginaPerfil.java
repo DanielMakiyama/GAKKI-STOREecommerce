@@ -15,6 +15,32 @@ public final class PaginaPerfil {
 
     public static final String CAMINHO = "/perfil";
 
+    public static final By CODIGO = By.cssSelector("[data-testid='codigo-cliente']");
+
+    // Dados cadastrais (RF0022)
+    public static final By ERRO_DADOS = By.cssSelector("[data-testid='erro-dados']");
+    public static final By SUCESSO_DADOS = By.cssSelector("[data-testid='sucesso-dados']");
+    public static final By BOTAO_SALVAR_DADOS = By.cssSelector("[data-testid='btn-salvar-dados']");
+
+    public static final By NOME = By.id("perf-nome");
+    public static final By EMAIL = By.id("perf-email");
+    public static final By CPF = By.id("perf-cpf");
+    public static final By GENERO = By.id("perf-genero");
+    public static final By NASCIMENTO = By.id("perf-nascimento");
+    public static final By TELEFONE_TIPO = By.id("perf-tel-tipo");
+    public static final By TELEFONE_DDD = By.id("perf-tel-ddd");
+    public static final By TELEFONE_NUMERO = By.id("perf-tel-numero");
+
+    // Senha (RF0028)
+    public static final By ERRO_SENHA = By.cssSelector("[data-testid='erro-senha']");
+    public static final By SUCESSO_SENHA = By.cssSelector("[data-testid='sucesso-senha']");
+    public static final By BOTAO_SALVAR_SENHA = By.cssSelector("[data-testid='btn-salvar-senha']");
+
+    public static final By SENHA_ATUAL = By.id("perf-senha-atual");
+    public static final By SENHA_NOVA = By.id("perf-senha-nova");
+    public static final By SENHA_CONFIRMACAO = By.id("perf-senha-confirmacao");
+
+    // Endereços (RF0026)
     public static final By SECAO_ENDERECOS = By.cssSelector("[data-testid='secao-enderecos']");
     public static final By ERRO_ENDERECO = By.cssSelector("[data-testid='erro-endereco']");
     public static final By BOTAO_NOVO_ENDERECO = By.cssSelector("[data-testid='btn-novo-endereco']");

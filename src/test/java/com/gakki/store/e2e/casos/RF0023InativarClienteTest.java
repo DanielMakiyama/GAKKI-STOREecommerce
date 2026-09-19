@@ -56,7 +56,7 @@ class RF0023InativarClienteTest extends BaseE2ETest {
     @Test
     @DisplayName("Inativa pelo painel e o cadastro PERMANECE na listagem")
     void inativaSemExcluir() {
-        entrarComoAdministrador();
+        abrirPainelComOCliente();
 
         assertThat(textoDe(PaginaAdmin.statusDoCliente(idDoCliente))).isEqualToIgnoringCase("Ativo");
 
@@ -91,7 +91,7 @@ class RF0023InativarClienteTest extends BaseE2ETest {
     void reativacaoDevolveAcesso() {
         ApiDeApoio.inativar(tokenAdmin, idDoCliente);
 
-        entrarComoAdministrador();
+        abrirPainelComOCliente();
         assertThat(textoDe(PaginaAdmin.statusDoCliente(idDoCliente))).isEqualToIgnoringCase("Inativo");
 
         clicar(PaginaAdmin.botaoDeStatus(idDoCliente));
@@ -116,13 +116,16 @@ class RF0023InativarClienteTest extends BaseE2ETest {
                 esperado.equalsIgnoreCase(nav.findElement(PaginaAdmin.statusDoCliente(idDoCliente)).getText()));
     }
 
-    private void entrarComoAdministrador() {
-        abrir(PaginaLogin.CAMINHO);
-        clicar(PaginaLogin.CARTAO_ADMIN);
-        esperarUrlConter("/admin");
-
-        clicar(PaginaAdmin.ABA_CLIENTES);
-        esperarPor(PaginaAdmin.BUSCA);
+    /**
+     * Entra no painel e garante que a linha do cliente está visível.
+     *
+     * <p>A entrada em si mora no {@code BaseE2ETest}, porque a RF0024
+     * precisa dela também. O que é específico daqui é exigir a linha
+     * deste cliente — sem ela, os testes falhariam com "elemento não
+     * encontrado" em vez de dizer que o seed não foi aplicado.
+     */
+    private void abrirPainelComOCliente() {
+        entrarComoAdministrador();
 
         try {
             esperarPor(PaginaAdmin.linhaDoCliente(idDoCliente));

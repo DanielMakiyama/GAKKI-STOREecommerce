@@ -1,6 +1,9 @@
 package com.gakki.store.e2e;
 
 import com.gakki.store.e2e.acoes.FluxoDeCadastro;
+import com.gakki.store.e2e.paginas.PaginaAdmin;
+import com.gakki.store.e2e.paginas.PaginaLogin;
+import com.gakki.store.e2e.paginas.PaginaPerfil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -141,8 +144,68 @@ public abstract class BaseE2ETest {
         espera.until(ExpectedConditions.urlContains(trecho));
     }
 
+    /** Valor atual de um campo de formulário. */
+    protected String valorDe(By seletor) {
+        // getDomProperty, e não getDomAttribute: o atributo HTML guarda o
+        // valor inicial, e num campo controlado pelo React ele não
+        // acompanha o que o usuário digitou nem o que o state trouxe.
+        return esperarPor(seletor).getDomProperty("value");
+    }
+
+    /**
+     * Espera um campo deixar de estar vazio.
+     *
+     * <p>O perfil renderiza com o formulário em branco e o preenche
+     * quando a resposta do {@code GET /clientes/me} chega. Conferir o
+     * valor sem esperar por isso lê a tela antes do banco.
+     */
+    protected void esperarCampoPreenchido(By seletor) {
+        espera.until(nav -> {
+            String valor = nav.findElement(seletor).getDomProperty("value");
+            return valor != null && !valor.isBlank();
+        });
+    }
+
     /** Fluxo de cadastro ligado ao navegador desta execução. */
     protected FluxoDeCadastro cadastro() {
         return new FluxoDeCadastro(navegador, espera, URL_BASE);
+    }
+
+    /**
+     * Cadastra um cliente novo pela tela e abre o perfil dele.
+     *
+     * <p>Devolve os dados usados, porque o e-mail e a senha fazem falta
+     * nos testes que precisam autenticar de novo depois.
+     *
+     * <p>Um cliente novo por teste é mais lento do que reaproveitar o do
+     * seed, e é o que mantém as suítes independentes: nenhuma enxerga o
+     * que a outra deixou para trás, e o cliente de demonstração continua
+     * intacto para a apresentação.
+     */
+    protected FluxoDeCadastro.Dados clienteNovoNoPerfil() {
+        FluxoDeCadastro.Dados dados = cadastro().registrarClienteNovo();
+        abrirPerfil();
+        return dados;
+    }
+
+    protected void abrirPerfil() {
+        abrir(PaginaPerfil.CAMINHO);
+        esperarPor(PaginaPerfil.SECAO_ENDERECOS);
+        esperarCampoPreenchido(PaginaPerfil.NOME);
+    }
+
+    /**
+     * Entra pelo cartão de administrador e abre a aba de clientes.
+     *
+     * <p>Usado pelas suítes de RF0023 e RF0024. O cartão vem do seed
+     * V999 — se a entrada falhar, o seed não foi aplicado.
+     */
+    protected void entrarComoAdministrador() {
+        abrir(PaginaLogin.CAMINHO);
+        clicar(PaginaLogin.CARTAO_ADMIN);
+        esperarUrlConter("/admin");
+
+        clicar(PaginaAdmin.ABA_CLIENTES);
+        esperarPor(PaginaAdmin.BUSCA);
     }
 }

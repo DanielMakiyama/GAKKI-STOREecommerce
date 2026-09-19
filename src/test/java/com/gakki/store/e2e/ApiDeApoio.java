@@ -48,6 +48,36 @@ public final class ApiDeApoio {
         return token("admin@gakkistore.com", "Admin@2026");
     }
 
+    public static String tokenDoClienteDeDemonstracao() {
+        return token("cliente@gakkistore.com", "Cliente@2026");
+    }
+
+    /**
+     * Status bruto do {@code GET /clientes} com o token informado.
+     *
+     * <p>Devolve o número em vez de lançar, porque aqui o código HTTP
+     * <b>é</b> o resultado esperado: a RF0024 exige que a consulta
+     * administrativa seja recusada a quem não é administrador, e o 403
+     * precisa ser afirmado, não tratado como falha.
+     *
+     * <p>É a única verificação da suíte que não passa pela tela, e não
+     * passa por um motivo: o front desvia o cliente para fora de
+     * {@code /admin} antes de qualquer requisição sair. O desvio protege
+     * a navegação, não o dado — quem protege o dado é o
+     * {@code @PreAuthorize}, e é ele que este método exercita.
+     */
+    public static int statusDaListagemDeClientes(String token) {
+        HttpRequest requisicao = requisicao("/clientes")
+                .GET()
+                .header("Authorization", "Bearer " + token)
+                .build();
+        try {
+            return CLIENTE.send(requisicao, HttpResponse.BodyHandlers.ofString()).statusCode();
+        } catch (Exception e) {
+            throw new IllegalStateException("Falha ao chamar " + requisicao.uri(), e);
+        }
+    }
+
     /** Id do cliente a partir do e-mail, via consulta administrativa (RF0024). */
     public static long idDoCliente(String tokenAdmin, String email) {
         JsonNode pagina = enviar(requisicao("/clientes?email=" + email)
