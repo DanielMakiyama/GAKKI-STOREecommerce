@@ -103,6 +103,17 @@ public abstract class BaseE2ETest {
     }
 
     /**
+     * Seleciona pela posição na lista.
+     *
+     * <p>Para campos cujo {@code value} é um id do banco — a bandeira do
+     * cartão, por exemplo. O id muda a cada recriação do schema, então
+     * fixá-lo no teste é amarrá-lo a um banco específico.
+     */
+    protected void selecionarPorIndice(By seletor, int indice) {
+        new Select(esperarPor(seletor)).selectByIndex(indice);
+    }
+
+    /**
      * Deixa a caixa de seleção no estado pedido.
      *
      * <p>Clicar direto <b>alterna</b>: um {@code click()} numa caixa já

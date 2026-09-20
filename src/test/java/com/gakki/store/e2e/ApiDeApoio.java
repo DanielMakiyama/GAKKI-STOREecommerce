@@ -8,6 +8,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Atalho pela API, usado só para preparar e limpar estado.
@@ -76,6 +78,20 @@ public final class ApiDeApoio {
         } catch (Exception e) {
             throw new IllegalStateException("Falha ao chamar " + requisicao.uri(), e);
         }
+    }
+
+    /**
+     * Nomes das bandeiras cadastradas no sistema (RN0025).
+     *
+     * <p>Endpoint público: a tela de cadastro o consome sem autenticação,
+     * porque o formulário de criação de conta já oferece o cartão.
+     */
+    public static List<String> nomesDasBandeiras() {
+        JsonNode resposta = enviar(requisicao("/bandeiras").GET().build());
+
+        List<String> nomes = new ArrayList<>();
+        resposta.forEach(bandeira -> nomes.add(bandeira.get("nome").asText()));
+        return nomes;
     }
 
     /** Id do cliente a partir do e-mail, via consulta administrativa (RF0024). */

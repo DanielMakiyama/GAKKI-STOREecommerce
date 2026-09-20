@@ -3,7 +3,8 @@ package com.gakki.store.e2e.paginas;
 import org.openqa.selenium.By;
 
 /**
- * Perfil do cliente — seção de endereços (RF0026).
+ * Perfil do cliente — dados cadastrais (RF0022), senha (RF0028),
+ * endereços (RF0026) e cartões (RF0027).
  *
  * <p>Os itens da lista são localizados pelo <b>apelido</b>, e não pelo
  * id: o id só existe depois que o backend salva, e o teste precisaria
@@ -66,19 +67,57 @@ public final class PaginaPerfil {
     public static final By END_ENTREGA = By.id("end-entrega");
     public static final By END_COBRANCA = By.id("end-cobranca");
 
+    // Cartões (RF0027) — mesma estrutura da seção de endereços.
+    public static final By SECAO_CARTOES = By.cssSelector("[data-testid='secao-cartoes']");
+    public static final By ERRO_CARTAO = By.cssSelector("[data-testid='erro-cartao']");
+    public static final By BOTAO_NOVO_CARTAO = By.cssSelector("[data-testid='btn-novo-cartao']");
+    public static final By BOTAO_SALVAR_CARTAO = By.cssSelector("[data-testid='btn-salvar-cartao']");
+    public static final By CARTOES = By.cssSelector("[data-cartao]");
+
+    public static final By CARTAO_APELIDO = By.id("cartao-apelido");
+    public static final By CARTAO_DIGITOS = By.id("cartao-digitos");
+    public static final By CARTAO_BANDEIRA = By.id("cartao-bandeira");
+    public static final By CARTAO_MES = By.id("cartao-mes");
+    public static final By CARTAO_ANO = By.id("cartao-ano");
+    public static final By CARTAO_TITULAR = By.id("cartao-titular");
+
+    /** Opções da bandeira — alimentadas por {@code GET /bandeiras} (RN0025). */
+    public static final By OPCOES_DE_BANDEIRA = By.cssSelector("#cartao-bandeira option");
+
     private PaginaPerfil() {
     }
 
-    /** O item da lista com este apelido. */
+    /**
+     * O endereço com este apelido.
+     *
+     * <p>O seletor exige {@code [data-endereco]} junto: as duas seções da
+     * página marcam seus itens com {@code data-apelido}, e sem isso um
+     * cartão chamado "Casa" seria confundido com o endereço "Casa".
+     */
     public static By endereco(String apelido) {
-        return By.cssSelector("[data-apelido='" + apelido + "']");
+        return By.cssSelector("[data-endereco][data-apelido='" + apelido + "']");
     }
 
     /**
-     * Botão de ação dentro do item: {@code principal}, {@code alterar} ou
-     * {@code remover}.
+     * Botão de ação dentro do endereço: {@code principal},
+     * {@code alterar} ou {@code remover}.
      */
     public static By acao(String apelido, String acao) {
-        return By.cssSelector("[data-apelido='" + apelido + "'] [data-acao='" + acao + "']");
+        return By.cssSelector(
+                "[data-endereco][data-apelido='" + apelido + "'] [data-acao='" + acao + "']");
+    }
+
+    /** O cartão com este apelido. */
+    public static By cartao(String apelido) {
+        return By.cssSelector("[data-cartao][data-apelido='" + apelido + "']");
+    }
+
+    /**
+     * Botão de ação dentro do cartão: {@code preferencial},
+     * {@code alterar} ou {@code remover}.
+     */
+    public static By acaoDoCartao(String apelido, String acao) {
+        return By.cssSelector(
+                "[data-cartao][data-apelido='" + apelido + "'] [data-acao='" + acao + "']");
     }
 }
