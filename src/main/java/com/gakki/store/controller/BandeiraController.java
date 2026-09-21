@@ -10,13 +10,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-/**
- * RN0025 — bandeiras registradas no sistema.
- *
- * <p>Público porque a tela de cadastro precisa montar o seletor de
- * bandeira antes de o usuário existir. É uma lista de domínio, sem dado
- * de ninguém.
- */
+//RN0025 — bandeiras registradas no sistema.
+
 @RestController
 @RequestMapping("/bandeiras")
 @RequiredArgsConstructor

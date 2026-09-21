@@ -25,6 +25,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+// RF0022, RF0023, RF0024 e RF0028 — cadastro do cliente e painel administrativo.
+
 @RestController
 @RequestMapping("/clientes")
 @RequiredArgsConstructor
@@ -32,25 +34,15 @@ public class ClienteController {
 
     private final ClienteService clienteService;
 
-    /**
-     * RF0024 — o cliente consulta o próprio cadastro.
-     *
-     * <p>{@code @AuthenticationPrincipal} entrega o usuário que o filtro
-     * JWT colocou no contexto. O identificador vem do token, não da URL:
-     * sem parâmetro de id, não há como pedir o cadastro de outra pessoa.
-     */
+    // RF0024 — o cliente lê o próprio cadastro. O id vem do token, não da URL.
+
     @GetMapping("/me")
     public ResponseEntity<ClienteResponse> meuPerfil(@AuthenticationPrincipal UsuarioAutenticado usuario) {
         return ResponseEntity.ok(clienteService.buscarPorEmail(usuario.getUsername()));
     }
 
-    /**
-     * RF0022 — o cliente altera os próprios dados cadastrais.
-     *
-     * <p>A resposta não é o cadastro puro: quando o e-mail muda, ela traz
-     * junto uma sessão nova, porque o token anterior foi emitido para um
-     * {@code subject} que deixou de existir.
-     */
+    // RF0022 — altera os dados cadastrais. Devolve sessão nova quando o e-mail muda.
+
     @PutMapping("/me")
     public ResponseEntity<CadastroAtualizadoResponse> alterarMeuCadastro(
             @AuthenticationPrincipal UsuarioAutenticado usuario,
@@ -59,12 +51,8 @@ public class ClienteController {
         return ResponseEntity.ok(clienteService.atualizar(usuario.getUsername(), requisicao));
     }
 
-    /**
-     * RF0028 — alteração isolada de senha.
-     *
-     * <p>Responde 204 sem corpo: não há nada de útil para devolver, e
-     * ecoar qualquer coisa relacionada a senha é risco desnecessário.
-     */
+    // RF0028 — troca só a senha. 204 sem corpo: nada relacionado a senha volta na resposta.
+
     @PatchMapping("/me/senha")
     public ResponseEntity<Void> alterarMinhaSenha(
             @AuthenticationPrincipal UsuarioAutenticado usuario,
@@ -74,16 +62,9 @@ public class ClienteController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * RF0024 — consulta administrativa com filtros combinados.
-     *
-     * <p>Todos os parâmetros são opcionais e se combinam: a RF0024 exige
-     * que qualquer campo sirva de filtro, isolado ou junto com os outros.
-     *
-     * <p>O {@code @PreAuthorize} fica aqui, ao lado do método que
-     * protege, em vez de num padrão de URL no SecurityConfig. Quem lê o
-     * endpoint vê a permissão exigida sem abrir outro arquivo.
-     */
+    // RF0024 — consulta administrativa. Os cinco filtros são opcionais e combináveis.
+    // @PreAuthorize fica ao lado do método, não num padrão de URL no SecurityConfig.
+
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PaginaResponse<ClienteResumoResponse>> listar(
@@ -98,20 +79,16 @@ public class ClienteController {
                 clienteService.listar(nome, email, cpf, codigo, ativo, paginacao));
     }
 
-    /** RF0024 — consulta administrativa de um cliente pelo id. */
+    // RF0024 — consulta administrativa de um cliente pelo id.
+
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ClienteResponse> buscarPorId(@PathVariable Long id) {
         return ResponseEntity.ok(clienteService.buscarPorId(id));
     }
 
-    /**
-     * RF0023 — o cliente encerra a própria conta.
-     *
-     * <p>Note que não existe {@code DELETE /clientes/me}. A ausência do
-     * verbo é intencional: o cadastro não é excluído, e um endpoint
-     * chamado DELETE sugeriria o contrário.
-     */
+    // RF0023 — o cliente encerra a própria conta. Não existe DELETE: o cadastro não é excluído.
+
     @PatchMapping("/me/inativar")
     public ResponseEntity<Void> inativarMinhaConta(
             @AuthenticationPrincipal UsuarioAutenticado usuario) {
@@ -120,7 +97,8 @@ public class ClienteController {
         return ResponseEntity.noContent().build();
     }
 
-    /** RF0023 — inativação pelo administrador. */
+    // RF0023 — inativação pelo administrador.
+
     @PatchMapping("/{id}/inativar")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> inativar(@PathVariable Long id) {
@@ -128,7 +106,8 @@ public class ClienteController {
         return ResponseEntity.noContent().build();
     }
 
-    /** RF0023 — reativação pelo administrador. */
+    // RF0023 — reativação pelo administrador.
+
     @PatchMapping("/{id}/ativar")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> ativar(@PathVariable Long id) {

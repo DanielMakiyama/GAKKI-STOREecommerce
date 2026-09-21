@@ -62,7 +62,7 @@ public class ClienteMapper {
         return montar(cliente, cliente.getCpf());
     }
 
-    /** Cadastro visto por terceiros (administração): CPF mascarado. */
+    //Cadastro visto por terceiros (admin): CPF mascarado
     public ClienteResponse paraResponse(Cliente cliente) {
         return montar(cliente, Formatos.mascararCpf(cliente.getCpf()));
     }
@@ -85,7 +85,7 @@ public class ClienteMapper {
                 usuario.isAtivo());
     }
 
-    /** Linha da listagem administrativa (RF0024). */
+   //Linha da listagem administrativa (RF0024)
     public ClienteResumoResponse paraResumo(Cliente cliente) {
         Usuario usuario = cliente.getUsuario();
         return new ClienteResumoResponse(

@@ -18,15 +18,8 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 
-/**
- * Endpoints públicos de entrada no sistema.
- *
- * <p>O caminho é relativo ao context-path {@code /api/v1}, definido no
- * application.yml — o prefixo de versão fica declarado num lugar só.
- *
- * <p>O controller não tem regra nenhuma: valida o formato do corpo com
- * {@code @Valid}, delega ao service e traduz o retorno em status HTTP.
- */
+// Rotas públicas. O /api/v1 vem do context-path no application.yml.
+
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
@@ -35,12 +28,8 @@ public class AuthController {
     private final ClienteService clienteService;
     private final AuthService authService;
 
-    /**
-     * RF0021 — cadastro de cliente.
-     *
-     * <p>Responde 201 com o cabeçalho {@code Location} apontando para o
-     * recurso criado, como manda o HTTP para criação bem-sucedida.
-     */
+    // RF0021. 201 + Location porque um recurso novo passou a existir.
+
     @PostMapping("/registrar")
     public ResponseEntity<ClienteResponse> registrar(@Valid @RequestBody RegistrarClienteRequest requisicao) {
         ClienteResponse cliente = clienteService.cadastrar(requisicao);
