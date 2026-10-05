@@ -5,6 +5,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import org.hibernate.Hibernate;
+import org.hibernate.proxy.HibernateProxy;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -68,16 +69,43 @@ final class ExtratorDeEstado {
         if (valor == null) {
             return null;
         }
-        if (ehRelacao(campo)) {
-            // getIdentifier lê o id do proxy sem inicializá-lo — não
-            // dispara SELECT nem arrisca LazyInitializationException.
-            return Hibernate.getIdentifier(valor);
-        }
-        return valor;
+        return ehRelacao(campo) ? idDe(valor) : valor;
     }
 
     private static boolean ehRelacao(Field campo) {
         return campo.isAnnotationPresent(ManyToOne.class)
                 || campo.isAnnotationPresent(OneToOne.class);
+    }
+
+    // Id de uma entidade relacionada, SEM inicializar o proxy.
+    //
+    // Chamar getId() no proxy dispararia o SELECT da entidade inteira, no
+    // meio do flush. O LazyInitializer já carrega o identificador — é o
+    // único dado que o proxy conhece antes de ser inicializado.
+    //
+    // Quando o campo não é proxy (relação já carregada), sobra ler o campo
+    // `id` por reflexão, que não dispara nada.
+    private static Object idDe(Object entidadeRelacionada) {
+        if (entidadeRelacionada instanceof HibernateProxy proxy) {
+            return proxy.getHibernateLazyInitializer().getIdentifier();
+        }
+        return lerId(entidadeRelacionada);
+    }
+
+    private static Object lerId(Object entidade) {
+        for (Class<?> classe = Hibernate.getClass(entidade);
+             classe != null && classe != Object.class;
+             classe = classe.getSuperclass()) {
+            try {
+                Field id = classe.getDeclaredField("id");
+                id.setAccessible(true);
+                return id.get(entidade);
+            } catch (NoSuchFieldException e) {
+                // Continua subindo: o id pode estar na superclasse.
+            } catch (IllegalAccessException e) {
+                return null;
+            }
+        }
+        return null;
     }
 }
