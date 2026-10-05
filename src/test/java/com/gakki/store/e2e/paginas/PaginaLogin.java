@@ -2,13 +2,8 @@ package com.gakki.store.e2e.paginas;
 
 import org.openqa.selenium.By;
 
-/**
- * Tela de entrada — os dois cartões de perfil.
- *
- * <p>O seletor é {@code [data-perfil=...]}, e não o texto do botão: ele
- * vira "Entrando…" durante a requisição, e uma busca por texto
- * quebraria conforme a velocidade da rede.
- */
+//Tela de entrada — os dois cartões de perfil.
+
 public final class PaginaLogin {
 
     public static final String CAMINHO = "/login";

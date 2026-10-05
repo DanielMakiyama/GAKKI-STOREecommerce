@@ -1,14 +1,17 @@
--- Carrinho de compra (RF0031, RF0032, RN0044).
+-- Carrinho de compra (RF0031, RF0032).
 --
 -- 1:1 com `cliente`, criado sob demanda na primeira chamada de
 -- "adicionar ao carrinho" — não existe carrinho anônimo nesta fatia, nem
--- linha de carrinho vazio no seed (contrato de Vendas, decisão 9).
+-- linha de carrinho vazio no seed (contrato de Vendas v3, decisão 11).
 --
--- `bloqueado_ate` é um único timer por carrinho, reiniciado a cada item
--- adicionado, e não um timer por item. O texto da RN0044/RN0045 permite
--- duas leituras quanto ao escopo do bloqueio; a leitura "carrinho inteiro"
--- foi a adotada, registrada como decisão 6 do contrato e como observação
--- na especificação de caso de uso — não é algo que o DRS resolve sozinho.
+-- `bloqueado_ate` nasce migrada mas SEM USO nesta fase: o bloqueio e a
+-- expiração de itens (RN0032, RN0044, RN0045, RNF0042) estão fora do
+-- escopo por exclusão explícita do enunciado, e nenhum código escreve
+-- nesta coluna. Quando a regra entrar, a leitura adotada é "um timer por
+-- carrinho, reiniciado a cada item adicionado" — e não um timer por item;
+-- o texto da RN0044/RN0045 permite as duas, então a escolha fica
+-- registrada como observação na especificação de caso de uso, não como
+-- algo que o DRS resolve sozinho.
 
 CREATE TABLE carrinho (
                           id            BIGSERIAL   NOT NULL,
@@ -21,7 +24,7 @@ CREATE TABLE carrinho (
 );
 
 COMMENT ON TABLE  carrinho               IS 'Carrinho de compra do cliente, um por cliente (RF0031)';
-COMMENT ON COLUMN carrinho.bloqueado_ate IS 'Instante em que o bloqueio dos itens reservados expira (RN0044); nulo quando o carrinho está vazio';
+COMMENT ON COLUMN carrinho.bloqueado_ate IS 'Reservada para o bloqueio temporário da RN0044; sem uso nesta fase — nenhum código escreve nesta coluna';
 
 CREATE TABLE item_carrinho (
                                id              BIGSERIAL     NOT NULL,
@@ -42,5 +45,5 @@ CREATE TABLE item_carrinho (
 -- comportamento já visível no protótipo mockado).
 CREATE UNIQUE INDEX ux_item_carrinho_instrumento ON item_carrinho (carrinho_id, instrumento_id);
 
-COMMENT ON TABLE  item_carrinho                IS 'Itens reservados no carrinho (RF0031, RF0032)';
+COMMENT ON TABLE  item_carrinho                IS 'Itens do carrinho (RF0031, RF0032) — não há reserva de estoque nesta fase';
 COMMENT ON COLUMN item_carrinho.valor_unitario IS 'Fotografia do valor de venda do instrumento no momento em que foi adicionado ao carrinho';

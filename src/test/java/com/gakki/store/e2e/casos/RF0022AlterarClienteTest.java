@@ -9,14 +9,8 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * RF0022 — Alterar cadastro de cliente.
- *
- * <p>Toda alteração é conferida <b>depois de recarregar a página</b>. É
- * a diferença entre provar que gravou e provar que a tela mostrou o que
- * acabou de ser digitado: sem o recarregamento, um backend que
- * respondesse 200 e não persistisse nada passaria nos quatro testes.
- */
+//RF0022 — Alterar cadastro de cliente.
+
 @DisplayName("RF0022 — Alterar cadastro de cliente")
 class RF0022AlterarClienteTest extends BaseE2ETest {
 
@@ -38,18 +32,6 @@ class RF0022AlterarClienteTest extends BaseE2ETest {
         assertThat(valorDe(PaginaPerfil.TELEFONE_NUMERO)).isEqualTo("977776666");
     }
 
-    /**
-     * O caso que justifica o {@code CadastroAtualizadoResponse}.
-     *
-     * <p>O e-mail é o {@code subject} do JWT. No instante em que ele
-     * muda, o token guardado no navegador aponta para um usuário que não
-     * existe mais — e a requisição seguinte volta 401 logo depois de um
-     * salvamento bem-sucedido. O backend devolve uma sessão nova junto
-     * da resposta, e a tela a guarda antes de qualquer outra chamada.
-     *
-     * <p>Sair da página e voltar é o que exercita isso: se a sessão
-     * tivesse morrido, a rota protegida jogaria o navegador no login.
-     */
     @Test
     @DisplayName("Altera e-mail e CPF, e a sessão sobrevive à troca do e-mail")
     void alteraEmailECpfSemPerderASessao() {

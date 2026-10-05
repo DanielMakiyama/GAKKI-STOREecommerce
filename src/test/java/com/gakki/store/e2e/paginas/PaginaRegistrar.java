@@ -2,13 +2,8 @@ package com.gakki.store.e2e.paginas;
 
 import org.openqa.selenium.By;
 
-/**
- * Tela de cadastro (RF0021).
- *
- * <p>Só seletores — a mecânica de preencher e submeter fica no
- * {@link com.gakki.store.e2e.acoes.FluxoDeCadastro}. Assim, quando o
- * front mudar uma classe de CSS, muda um arquivo, e nenhum teste.
- */
+// Tela de cadastro (RF0021).
+
 public final class PaginaRegistrar {
 
     public static final String CAMINHO = "/registrar";

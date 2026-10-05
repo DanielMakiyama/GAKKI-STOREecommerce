@@ -2,16 +2,8 @@ package com.gakki.store.e2e.paginas;
 
 import org.openqa.selenium.By;
 
-/**
- * Perfil do cliente — dados cadastrais (RF0022), senha (RF0028),
- * endereços (RF0026) e cartões (RF0027).
- *
- * <p>Os itens da lista são localizados pelo <b>apelido</b>, e não pelo
- * id: o id só existe depois que o backend salva, e o teste precisaria
- * lê-lo de volta da tela antes de poder clicar em qualquer coisa. O
- * apelido é escolhido pelo teste, é o que o usuário enxerga e é único
- * dentro de cada cenário.
- */
+// Perfil do cliente dados cadastrais (RF0022), senha (RF0028),endereços (RF0026) e cartões (RF0027).
+
 public final class PaginaPerfil {
 
     public static final String CAMINHO = "/perfil";

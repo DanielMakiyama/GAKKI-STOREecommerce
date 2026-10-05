@@ -9,24 +9,8 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * RF0026 — Endereços do cliente, com as garantias da RN0021, RN0022 e
- * RN0023.
- *
- * <p>Cada teste começa cadastrando um cliente <b>novo</b> pela tela. É
- * mais lento do que reaproveitar o cliente do seed, e é de propósito:
- *
- * <ul>
- *   <li>o cliente nasce com exatamente um endereço, de entrega e de
- *       cobrança — o estado em que a RN0022 pode ser provada sem montar
- *       nada antes;</li>
- *   <li>nenhum teste enxerga o que outro deixou para trás, então a
- *       suíte dá o mesmo resultado rodando inteira, sozinha ou fora de
- *       ordem;</li>
- *   <li>o cliente de demonstração do seed continua intacto para a
- *       apresentação.</li>
- * </ul>
- */
+// RF0026 - Endereços do cliente, com as garantias da RN0021, RN0022 RN0023.
+
 @DisplayName("RF0026 — Endereços do cliente")
 class RF0026EnderecosClienteTest extends BaseE2ETest {
 
@@ -122,13 +106,6 @@ class RF0026EnderecosClienteTest extends BaseE2ETest {
         assertThat(navegador.findElements(PaginaPerfil.endereco(TRABALHO))).isEmpty();
     }
 
-    /**
-     * Abre o formulário, preenche e salva.
-     *
-     * <p>Não espera pelo resultado de propósito: os casos de sucesso
-     * esperam a lista crescer, e o caso da RN0023 espera a mensagem de
-     * erro. Quem chama sabe o que vem depois.
-     */
     private void adicionarEndereco(String apelido, boolean entrega, boolean cobranca) {
         clicar(PaginaPerfil.BOTAO_NOVO_ENDERECO);
 

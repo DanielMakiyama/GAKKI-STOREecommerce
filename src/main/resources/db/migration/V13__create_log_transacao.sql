@@ -5,9 +5,11 @@
 -- Não é retroativo ao restante do CRUD de Cliente (contrato de Vendas,
 -- decisão 8).
 --
--- Guarda os dados alterados (não só a data/hora/usuário) porque a RN0012
--- do DRS exige "manter os dados alterados" — implica consulta posterior,
--- não só uma linha em arquivo de log de aplicação.
+-- Guarda os dados alterados (não só a data/hora/usuário) porque o RNF0012
+-- do DRS exige "registrar data, hora, usuário responsável além de manter
+-- os dados alterados" — implica consulta posterior, não só uma linha em
+-- arquivo de log de aplicação. (RN0012 é outra coisa: associação de livro
+-- com mais de uma categoria.)
 
 CREATE TABLE log_transacao (
     id               BIGSERIAL     NOT NULL,

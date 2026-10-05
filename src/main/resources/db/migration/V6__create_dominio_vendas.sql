@@ -28,7 +28,8 @@ COMMENT ON TABLE fabricante IS 'Fabricantes/marcas dos instrumentos cadastrados'
 -- estoque, mas nenhum RF/RN detalha cadastro ou validação própria de
 -- fornecedor — por isso não há coluna `ativo` nem regra de unicidade além
 -- do nome. É criado por "find-or-create" a partir do texto livre que o
--- formulário de estoque já envia (contrato de Vendas, decisão 4).
+-- formulário de estoque envia — comportamento da entrada em estoque
+-- (RF0051), que não faz parte desta fatia.
 CREATE TABLE fornecedor (
                             id   BIGSERIAL    NOT NULL,
                             nome VARCHAR(120) NOT NULL,

@@ -12,19 +12,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * RF0028 — Alterar apenas a senha.
- *
- * <p>O requisito é literal: a senha deve poder ser trocada "sem que seja
- * necessária a alteração de todos os dados cadastrais". Por isso o
- * formulário de senha é separado do de dados na tela, e o endpoint é um
- * {@code PATCH} próprio, e não o {@code PUT} do cadastro.
- *
- * <p>Os três casos de recusa vêm todos do servidor. A tela não confere
- * nada antes de enviar, de propósito: uma validação em JavaScript
- * esconderia uma falha do backend, e o teste passaria provando o
- * navegador em vez da regra.
- */
+// RF0028 — Alterar apenas a senha.
+
 @DisplayName("RF0028 — Alterar apenas a senha")
 class RF0028AlterarSenhaTest extends BaseE2ETest {
 

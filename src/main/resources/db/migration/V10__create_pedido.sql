@@ -9,7 +9,7 @@
 -- PAGAMENTO_REALIZADO, EM_TRANSITO, CANCELADA). O DRS é a única fonte
 -- válida para a especificação do caso de uso; o mock e o front são
 -- ajustados depois para bater com o backend, não o contrário (contrato de
--- Vendas, decisão 1).
+-- Vendas v3, observação 3 da seção 10).
 --
 -- O enunciado da atividade de criação de pedido exclui explicitamente a
 -- validação de pagamento (RN0037/RN0038): o happy path desta fase sempre

@@ -10,18 +10,8 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * RF0021 — Cadastrar cliente.
- *
- * <p>Cada teste nomeia a regra que valida. A saída do
- * {@code mvn test -Pe2e} vira a matriz de rastreabilidade da
- * apresentação, sem precisar montar tabela à mão.
- *
- * <p>Os quatro casos de recusa partem de um cadastro válido e estragam
- * <b>um</b> campo. É o que torna cada falha atribuível: se o cadastro
- * inteiro estivesse errado, a tela recusaria de qualquer jeito e o teste
- * passaria sem provar a regra que diz testar.
- */
+//RF0021 — Cadastrar cliente.
+
 @DisplayName("RF0021 — Cadastrar cliente")
 class RF0021CadastrarClienteTest extends BaseE2ETest {
 

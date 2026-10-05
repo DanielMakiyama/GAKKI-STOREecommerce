@@ -2,7 +2,8 @@
 --
 -- Cada linha é uma entrada física, com seu próprio custo, fornecedor e
 -- data — preservada para auditoria, ainda que a saída (RF0053) não
--- rastreie lote a lote nesta fatia (contrato de Vendas, decisão 11). É o
+-- rastreie lote a lote: a baixa em estoque está fora do escopo desta
+-- fatia, então nada consome lote nesta fase. É o
 -- histórico de custos que alimenta o recálculo da RN0051: o valor de venda
 -- do instrumento é sempre baseado no MAIOR custo já registrado entre
 -- todos os lotes.

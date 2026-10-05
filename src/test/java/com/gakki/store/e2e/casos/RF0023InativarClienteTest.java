@@ -12,20 +12,8 @@ import org.openqa.selenium.TimeoutException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * RF0023 — Inativar cadastro de cliente.
- *
- * <p>É o caso que o enunciado destaca: "tratamento correto da distinção
- * entre inativação e exclusão". A prova tem duas metades, e nenhuma
- * delas basta sozinha:
- *
- * <ol>
- *   <li>Depois de inativado, o cadastro <b>continua</b> na listagem
- *       administrativa — não foi excluído.</li>
- *   <li>Mesmo assim, o cliente <b>não consegue mais entrar</b> — a
- *       inativação tem efeito.</li>
- * </ol>
- */
+//RF0023 — Inativar cadastro de cliente.
+
 @DisplayName("RF0023 — Inativar cadastro de cliente")
 class RF0023InativarClienteTest extends BaseE2ETest {
 
@@ -40,14 +28,9 @@ class RF0023InativarClienteTest extends BaseE2ETest {
         idDoCliente = ApiDeApoio.idDoCliente(tokenAdmin, EMAIL_CLIENTE);
     }
 
-    /**
-     * Devolve o cliente de demonstração ao estado ativo.
-     *
-     * <p>Roda pela API, e não pela tela, de propósito: se o teste falhar
-     * no meio, a limpeza ainda acontece. Sem isso, uma falha deixaria o
-     * cartão "Entrar como cliente" inutilizável para todas as outras
-     * suítes.
-     */
+
+     //Devolve o cliente de demonstração ao estado ativo.
+
     @AfterEach
     void reativarCliente() {
         ApiDeApoio.ativar(tokenAdmin, idDoCliente);

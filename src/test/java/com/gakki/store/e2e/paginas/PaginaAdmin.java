@@ -2,7 +2,7 @@ package com.gakki.store.e2e.paginas;
 
 import org.openqa.selenium.By;
 
-/** Painel administrativo — aba de clientes (RF0023, RF0024). */
+// Painel administrativo — aba de clientes (RF0023, RF0024).
 public final class PaginaAdmin {
 
     public static final String CAMINHO = "/admin";

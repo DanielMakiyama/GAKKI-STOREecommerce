@@ -15,30 +15,8 @@ import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * RF0024 — Consulta de clientes por filtro.
- *
- * <p>O requisito é literal: "todos os campos utilizados para
- * identificação do cliente podem ser utilizados como filtro, tanto de
- * forma combinada como de forma isolada". Os testes cobrem os cinco
- * campos isolados e a combinação.
- *
- * <p>Os cenários usam os clientes do seed V999, fixados no contrato:
- *
- * <ul>
- *   <li>CLI-0001 Cliente Demonstração — ativo</li>
- *   <li>CLI-0002 Maria Souza — ativo</li>
- *   <li>CLI-0003 João Pereira — ativo</li>
- *   <li>CLI-0004 Beatriz Lima — <b>inativo</b></li>
- * </ul>
- *
- * <p><b>Nenhuma asserção conta linhas.</b> A primeira versão desta suíte
- * esperava "total = 1" e quebrou: as outras suítes cadastram um cliente
- * por teste, então a tabela cresce a cada execução e qualquer número
- * fixo tem prazo de validade. O que se afirma aqui é <i>quem</i> aparece
- * e <i>quem não</i> — que é o que o requisito realmente exige, e vale
- * para um banco com quatro clientes ou quatrocentos.
- */
+//RF0024 — Consulta de clientes por filtro.
+
 @DisplayName("RF0024 — Consulta de clientes por filtro")
 class RF0024ConsultarClienteTest extends BaseE2ETest {
 
@@ -107,15 +85,6 @@ class RF0024ConsultarClienteTest extends BaseE2ETest {
         esperarListagem(BEATRIZ, DEMONSTRACAO, MARIA, JOAO);
     }
 
-    /**
-     * O caso que prova a combinação, e não a mera coexistência dos campos.
-     *
-     * <p>"Lima" sozinho encontra a Beatriz. "Somente ativos" sozinho
-     * encontra vários. Juntos precisam encontrar <b>nenhum</b>, porque ela
-     * está inativa. Um backend que ignorasse o segundo filtro, ou que
-     * trocasse o {@code AND} por {@code OR}, passaria em todos os testes
-     * anteriores e falharia neste.
-     */
     @Test
     @DisplayName("Filtros combinados: nome + status se aplicam em conjunto, não em alternativa")
     void combinaNomeEStatus() {
@@ -135,15 +104,7 @@ class RF0024ConsultarClienteTest extends BaseE2ETest {
         esperarListagem(BEATRIZ, DEMONSTRACAO, MARIA, JOAO);
     }
 
-    /**
-     * A consulta administrativa é privativa do administrador.
-     *
-     * <p>A prova tem duas camadas, e a segunda é a que importa: o front
-     * desvia o cliente para fora de {@code /admin} antes de qualquer
-     * requisição sair, mas isso protege a navegação, não o dado. Quem
-     * protege o dado é o {@code @PreAuthorize} do controller — e um
-     * cliente com token válido chamando a API direto tem que levar 403.
-     */
+
     @Test
     @DisplayName("Cliente não acessa a consulta administrativa (403)")
     void clienteNaoConsultaOutrosClientes() {
@@ -162,22 +123,14 @@ class RF0024ConsultarClienteTest extends BaseE2ETest {
         assertThat(status).isEqualTo(403);
     }
 
-    /** Limpa os filtros, preenche um só e aplica. */
+    // Limpa os filtros, preenche um só e aplica.
     private void filtrar(By campo, String valor) {
         clicar(PaginaAdmin.BOTAO_LIMPAR);
         preencher(campo, valor);
         clicar(PaginaAdmin.BOTAO_FILTRAR);
     }
 
-    /**
-     * Espera a listagem conter um cadastro e não conter os outros.
-     *
-     * <p>Esperar pelas <b>duas</b> condições juntas é o que elimina a
-     * corrida: entre o clique em "Filtrar" e a resposta do servidor, a
-     * tabela ainda mostra o resultado anterior — onde o esperado já está
-     * presente, junto com todos os demais. Conferir só a presença
-     * aprovaria a tela não filtrada.
-     */
+
     private void esperarListagem(String presente, String... ausentes) {
         try {
             espera.until(nav ->
@@ -201,14 +154,6 @@ class RF0024ConsultarClienteTest extends BaseE2ETest {
         return !navegador.findElements(PaginaAdmin.linhaComCodigo(codigo)).isEmpty();
     }
 
-    /**
-     * Descreve o que estava na tela quando a espera estourou.
-     *
-     * <p>Um {@code TimeoutException} cru só diz que a condição não foi
-     * satisfeita. Saber quais cadastros estavam listados, e se havia
-     * mensagem de erro, é a diferença entre diagnosticar na hora e
-     * precisar de outra execução para descobrir.
-     */
     private String diagnostico(String esperado) {
         String listados = navegador.findElements(PaginaAdmin.LINHAS).stream()
                 .map(linha -> linha.getDomAttribute("data-codigo"))

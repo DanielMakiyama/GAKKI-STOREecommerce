@@ -19,25 +19,6 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.time.Duration;
 
-/**
- * Base dos testes de aceitação pela interface.
- *
- * <p>Marcada com {@code @Tag("e2e")}, que o surefire exclui do
- * {@code mvn test} comum — estes testes abrem um navegador e exigem
- * backend, banco e front no ar. Rodam com {@code mvn test -Pe2e}.
- *
- * <p>Pré-requisitos, nesta ordem:
- * <ol>
- *   <li>PostgreSQL rodando com o banco {@code gakki} migrado</li>
- *   <li>Backend em {@code localhost:8080} (JWT_SECRET definido)</li>
- *   <li>Front em {@code localhost:5173} ({@code npm run dev})</li>
- * </ol>
- *
- * <p>Parâmetros: {@code -De2e.url=...} muda a URL do front e
- * {@code -De2e.headless=true} roda sem abrir janela. Em apresentação,
- * deixe visível — ver o navegador se preencher sozinho é metade do
- * argumento.
- */
 @Tag("e2e")
 public abstract class BaseE2ETest {
 
@@ -72,14 +53,6 @@ public abstract class BaseE2ETest {
         navegador.get(URL_BASE + caminho);
     }
 
-    /**
-     * Espera o elemento aparecer antes de devolvê-lo.
-     *
-     * <p>Toda busca passa por aqui de propósito. A tela é uma SPA: o
-     * conteúdo chega depois de um fetch, então um {@code findElement}
-     * direto encontra a página ainda vazia e falha de forma
-     * intermitente — passa numa máquina rápida, falha na do professor.
-     */
     protected WebElement esperarPor(By seletor) {
         return espera.until(ExpectedConditions.visibilityOfElementLocated(seletor));
     }
@@ -102,26 +75,10 @@ public abstract class BaseE2ETest {
         new Select(esperarPor(seletor)).selectByValue(valor);
     }
 
-    /**
-     * Seleciona pela posição na lista.
-     *
-     * <p>Para campos cujo {@code value} é um id do banco — a bandeira do
-     * cartão, por exemplo. O id muda a cada recriação do schema, então
-     * fixá-lo no teste é amarrá-lo a um banco específico.
-     */
     protected void selecionarPorIndice(By seletor, int indice) {
         new Select(esperarPor(seletor)).selectByIndex(indice);
     }
 
-    /**
-     * Deixa a caixa de seleção no estado pedido.
-     *
-     * <p>Clicar direto <b>alterna</b>: um {@code click()} numa caixa já
-     * marcada a desmarca. Como o formulário de endereço nasce com
-     * "entrega" marcada e "cobrança" não, um teste que só clicasse
-     * produziria estados diferentes conforme o campo — e falharia por
-     * motivo nenhum.
-     */
     protected void marcarCaixa(By seletor, boolean marcada) {
         WebElement caixa = esperarPor(seletor);
         if (caixa.isSelected() != marcada) {
@@ -138,15 +95,6 @@ public abstract class BaseE2ETest {
         espera.until(ExpectedConditions.numberOfElementsToBe(seletor, quantidade));
     }
 
-    /**
-     * Substitui o conteúdo de um campo que já vem preenchido.
-     *
-     * <p>Seleciona tudo e digita por cima, em vez de {@code clear()}: num
-     * campo controlado pelo React, o {@code clear()} zera o DOM sem
-     * passar pelo {@code onChange}, e o próximo render pode devolver o
-     * valor antigo. O Ctrl+A seguido de digitação é uma edição normal,
-     * indistinguível da que uma pessoa faria.
-     */
     protected void substituir(By seletor, String valor) {
         esperarPor(seletor).sendKeys(Keys.chord(Keys.CONTROL, "a"), valor);
     }
@@ -163,13 +111,6 @@ public abstract class BaseE2ETest {
         return esperarPor(seletor).getDomProperty("value");
     }
 
-    /**
-     * Espera um campo deixar de estar vazio.
-     *
-     * <p>O perfil renderiza com o formulário em branco e o preenche
-     * quando a resposta do {@code GET /clientes/me} chega. Conferir o
-     * valor sem esperar por isso lê a tela antes do banco.
-     */
     protected void esperarCampoPreenchido(By seletor) {
         espera.until(nav -> {
             String valor = nav.findElement(seletor).getDomProperty("value");
@@ -177,22 +118,13 @@ public abstract class BaseE2ETest {
         });
     }
 
-    /** Fluxo de cadastro ligado ao navegador desta execução. */
+    // Fluxo de cadastro ligado ao navegador desta execução
     protected FluxoDeCadastro cadastro() {
         return new FluxoDeCadastro(navegador, espera, URL_BASE);
     }
 
-    /**
-     * Cadastra um cliente novo pela tela e abre o perfil dele.
-     *
-     * <p>Devolve os dados usados, porque o e-mail e a senha fazem falta
-     * nos testes que precisam autenticar de novo depois.
-     *
-     * <p>Um cliente novo por teste é mais lento do que reaproveitar o do
-     * seed, e é o que mantém as suítes independentes: nenhuma enxerga o
-     * que a outra deixou para trás, e o cliente de demonstração continua
-     * intacto para a apresentação.
-     */
+    //Cadastra um cliente novo pela tela e abre o perfil dele.
+
     protected FluxoDeCadastro.Dados clienteNovoNoPerfil() {
         FluxoDeCadastro.Dados dados = cadastro().registrarClienteNovo();
         abrirPerfil();

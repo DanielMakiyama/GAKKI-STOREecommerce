@@ -14,25 +14,8 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * RF0027 — Cartões de crédito do cliente.
- *
- * <p>O requisito tem duas partes: "deve ser possível associar diversos
- * cartões ao cadastro de um cliente" e "deve haver um cartão configurado
- * como preferencial". A segunda é a interessante — preferencial é
- * exclusivo, garantido pelo índice parcial
- * {@code ux_cartao_preferencial}, e não apenas por código no service.
- *
- * <p>Cada teste cadastra um cliente novo pela tela, que nasce <b>sem
- * cartão</b>: o cartão é opcional no cadastro, ao contrário do endereço
- * (RN0022). Isso dá a cada cenário um ponto de partida limpo.
- *
- * <p>Guarde a assimetria com os endereços, porque é pergunta provável:
- * remover o último endereço de entrega é recusado com 409, mas remover
- * o último cartão é permitido. O motivo está na regra de negócio — uma
- * compra precisa de endereço de entrega, mas pode ser paga com um cartão
- * informado na hora ou com cupom.
- */
+//RF0027 — Cartões de crédito do cliente.
+
 @DisplayName("RF0027 — Cartões de crédito do cliente")
 class RF0027CartoesTest extends BaseE2ETest {
 
@@ -79,15 +62,8 @@ class RF0027CartoesTest extends BaseE2ETest {
         assertThat(navegador.findElements(PaginaPerfil.CARTOES)).isEmpty();
     }
 
-    /**
-     * RN0025 — a bandeira precisa estar registrada no sistema.
-     *
-     * <p>A regra não pode ser violada pela tela: o {@code <select>} é
-     * alimentado por {@code GET /bandeiras}, então não existe opção
-     * inválida para escolher. A prova possível pela interface é
-     * exatamente essa — que as opções oferecidas são as bandeiras
-     * cadastradas, e nada além delas.
-     */
+    //RN0025 — a bandeira precisa estar registrada no sistema.
+
     @Test
     @DisplayName("RN0025 — a tela só oferece bandeiras cadastradas no sistema")
     void ofereceSomenteBandeirasCadastradas() {

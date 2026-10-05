@@ -11,20 +11,8 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Atalho pela API, usado só para preparar e limpar estado.
- *
- * <p>Não substitui o teste de interface: a verificação continua sendo
- * feita na tela. O que este apoio evita é gastar dez cliques montando a
- * situação inicial — e, principalmente, deixar o banco quebrado quando
- * um teste falha no meio.
- *
- * <p>O caso concreto: a tela de login só oferece dois perfis fixos. Um
- * teste que inativa o cliente de demonstração e falha antes de reativar
- * deixaria o cartão "Entrar como cliente" inutilizável para todas as
- * outras suítes. O {@code @AfterEach} reativa por aqui, sem depender de
- * a interface ter chegado ao fim.
- */
+//Atalho pela API, usado só para preparar e limpar estado.
+
 public final class ApiDeApoio {
 
     private static final String URL_API = System.getProperty("e2e.api", "http://localhost:8080/api/v1");
@@ -54,20 +42,6 @@ public final class ApiDeApoio {
         return token("cliente@gakkistore.com", "Cliente@2026");
     }
 
-    /**
-     * Status bruto do {@code GET /clientes} com o token informado.
-     *
-     * <p>Devolve o número em vez de lançar, porque aqui o código HTTP
-     * <b>é</b> o resultado esperado: a RF0024 exige que a consulta
-     * administrativa seja recusada a quem não é administrador, e o 403
-     * precisa ser afirmado, não tratado como falha.
-     *
-     * <p>É a única verificação da suíte que não passa pela tela, e não
-     * passa por um motivo: o front desvia o cliente para fora de
-     * {@code /admin} antes de qualquer requisição sair. O desvio protege
-     * a navegação, não o dado — quem protege o dado é o
-     * {@code @PreAuthorize}, e é ele que este método exercita.
-     */
     public static int statusDaListagemDeClientes(String token) {
         HttpRequest requisicao = requisicao("/clientes")
                 .GET()
@@ -80,12 +54,8 @@ public final class ApiDeApoio {
         }
     }
 
-    /**
-     * Nomes das bandeiras cadastradas no sistema (RN0025).
-     *
-     * <p>Endpoint público: a tela de cadastro o consome sem autenticação,
-     * porque o formulário de criação de conta já oferece o cartão.
-     */
+    //Nomes das bandeiras cadastradas no sistema (RN0025).
+
     public static List<String> nomesDasBandeiras() {
         JsonNode resposta = enviar(requisicao("/bandeiras").GET().build());
 
@@ -94,7 +64,7 @@ public final class ApiDeApoio {
         return nomes;
     }
 
-    /** Id do cliente a partir do e-mail, via consulta administrativa (RF0024). */
+    //Id do cliente a partir do e-mail, via consulta administrativa (RF0024)
     public static long idDoCliente(String tokenAdmin, String email) {
         JsonNode pagina = enviar(requisicao("/clientes?email=" + email)
                 .GET()

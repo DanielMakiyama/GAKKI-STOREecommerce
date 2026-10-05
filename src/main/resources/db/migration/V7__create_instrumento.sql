@@ -1,11 +1,11 @@
 -- Catálogo de instrumentos (RF0011).
 --
--- `quantidade_estoque` acumula uma função dupla, por decisão registrada no
--- contrato de Vendas (decisão 2): é tanto o estoque disponível quanto a
--- reserva do carrinho. Adicionar ao carrinho decrementa esta coluna na
--- hora — é o que impede dois clientes de reservarem o mesmo item (RN0031,
--- RN0044); a baixa definitiva da RF0053 não precisa descontar de novo,
--- porque o desconto já aconteceu na reserva.
+-- `quantidade_estoque` é somente LIDA pelo fluxo de criação de pedido. A
+-- RN0031 nesta fatia é um SELECT seguido de comparação: adicionar ao
+-- carrinho e finalizar a compra não decrementam nada (contrato de Vendas
+-- v3, decisão 1). A baixa definitiva (RF0053/RN0028) e a reserva com
+-- bloqueio (RN0044) estão fora do escopo desta fase por exclusão explícita
+-- do enunciado — a coluna já nasce pronta para quando entrarem.
 
 -- Sequence dedicada ao código do instrumento, mesmo padrão de
 -- `seq_codigo_cliente` (V2): o service consome o nextval e formata como
@@ -41,7 +41,7 @@ CREATE INDEX ix_instrumento_nome ON instrumento (lower(nome));
 COMMENT ON TABLE  instrumento                     IS 'Catálogo de instrumentos musicais (RF0011)';
 COMMENT ON COLUMN instrumento.codigo              IS 'Código único no formato INST-0001';
 COMMENT ON COLUMN instrumento.valor_venda         IS 'Recalculado a cada entrada em estoque, sobre o maior custo já registrado (RN0051)';
-COMMENT ON COLUMN instrumento.quantidade_estoque  IS 'Estoque disponível; decrementado na reserva do carrinho, não apenas na venda confirmada (RN0031, RN0044)';
+COMMENT ON COLUMN instrumento.quantidade_estoque  IS 'Estoque disponível; nesta fase apenas lido para validar a RN0031 — nenhuma escrita decrementa a coluna (RF0053/RN0028 fora de escopo)';
 COMMENT ON COLUMN instrumento.ativo               IS 'FALSE = inativado (RF0012); fora do escopo desta fatia, mas a coluna já nasce pronta';
 
 -- Junção N:N (RN0012 — um instrumento pode estar em mais de uma categoria).
