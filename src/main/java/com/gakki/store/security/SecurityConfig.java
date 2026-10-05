@@ -72,6 +72,11 @@ public class SecurityConfig {
                         // comparação.
                         .requestMatchers("/auth/registrar", "/auth/login", "/auth/refresh").permitAll()
                         .requestMatchers(HttpMethod.GET, "/bandeiras").permitAll()
+                        // A vitrine é pública, como em qualquer loja: o
+                        // cliente vê o catálogo antes de criar conta. Só
+                        // leitura — não existe POST /instrumentos nesta
+                        // fatia, então liberar o GET não abre escrita.
+                        .requestMatchers(HttpMethod.GET, "/instrumentos", "/instrumentos/*").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         // A autorização fina de cada endpoint fica no
                         // @PreAuthorize do controller, ao lado do método
