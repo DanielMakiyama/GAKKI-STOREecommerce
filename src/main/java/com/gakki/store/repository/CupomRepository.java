@@ -2,18 +2,16 @@ package com.gakki.store.repository;
 
 import com.gakki.store.domain.vendas.Cupom;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.Collection;
 import java.util.List;
 
 public interface CupomRepository extends JpaRepository<Cupom, Long> {
 
-    // Cupons que o cliente ainda pode usar, do maior para o menor.
-    //
-    // A ordem não é estética: o algoritmo da RN0036 trabalha sobre o
-    // conjunto ordenado por valor para decidir se sobrou cupom
-    // desnecessário (contrato de Vendas v3, decisão 4).
-    List<Cupom> findByClienteIdAndUtilizadoFalseOrderByValorDesc(Long clienteId);
+    // Todos os cupons do cliente, utilizados ou não — a tela "Meus
+    // cupons" mostra os dois estados, com a etiqueta Utilizado/Disponível.
+    List<Cupom> findByClienteIdOrderByUtilizadoAscValorDesc(Long clienteId);
 
     // Resolve os códigos enviados no checkout.
     //
@@ -23,7 +21,9 @@ public interface CupomRepository extends JpaRepository<Cupom, Long> {
     // responde 400 se faltar algum — sem dizer se o código existe.
     List<Cupom> findByClienteIdAndCodigoIn(Long clienteId, Collection<String> codigos);
 
-    // Usado na geração do cupom de troco (RN0036) para garantir que o
-    // código novo não colide com um já emitido.
     boolean existsByCodigo(String codigo);
+
+    // RN0036 — numeração do cupom de troco, pela sequence da V14.
+    @Query(value = "SELECT nextval('seq_codigo_cupom')", nativeQuery = true)
+    Long proximoNumeroDeCupom();
 }
