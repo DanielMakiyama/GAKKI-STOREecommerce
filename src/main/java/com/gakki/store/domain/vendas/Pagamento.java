@@ -1,8 +1,10 @@
 package com.gakki.store.domain.vendas;
 
+import com.gakki.store.auditoria.AuditoriaListener;
 import com.gakki.store.domain.cliente.Cartao;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -29,6 +31,7 @@ import java.math.BigDecimal;
 // PedidoService.
 
 @Entity
+@EntityListeners(AuditoriaListener.class)
 @Table(name = "pagamento")
 @Getter
 @Setter

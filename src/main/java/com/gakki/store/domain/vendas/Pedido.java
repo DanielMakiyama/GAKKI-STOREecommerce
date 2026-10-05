@@ -1,11 +1,13 @@
 package com.gakki.store.domain.vendas;
 
+import com.gakki.store.auditoria.AuditoriaListener;
 import com.gakki.store.domain.cliente.Cliente;
 import com.gakki.store.domain.cliente.Endereco;
 import com.gakki.store.domain.vendas.enums.StatusPedido;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
@@ -30,6 +32,7 @@ import java.util.List;
 // são gravados junto, numa única transação.
 
 @Entity
+@EntityListeners(AuditoriaListener.class)
 @Table(name = "pedido")
 @Getter
 @Setter

@@ -1,7 +1,9 @@
 package com.gakki.store.domain.vendas;
 
+import com.gakki.store.auditoria.AuditoriaListener;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -28,6 +30,7 @@ import java.util.Set;
 // nesta fase (contrato de Vendas v3, decisão 1).
 
 @Entity
+@EntityListeners(AuditoriaListener.class)
 @Table(name = "instrumento")
 @Getter
 @Setter
