@@ -1,7 +1,7 @@
-package com.gakki.store.domain;
+package com.gakki.store.domain.cliente;
 
-import com.gakki.store.domain.enums.Genero;
-import com.gakki.store.domain.enums.TipoTelefone;
+import com.gakki.store.domain.cliente.enums.Genero;
+import com.gakki.store.domain.cliente.enums.TipoTelefone;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

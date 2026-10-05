@@ -1,6 +1,6 @@
 package com.gakki.store.repository;
 
-import com.gakki.store.domain.Endereco;
+import com.gakki.store.domain.cliente.Endereco;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

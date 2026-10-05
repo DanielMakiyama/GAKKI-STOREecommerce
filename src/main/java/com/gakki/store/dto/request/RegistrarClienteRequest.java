@@ -1,6 +1,6 @@
 package com.gakki.store.dto.request;
 
-import com.gakki.store.domain.enums.Genero;
+import com.gakki.store.domain.cliente.enums.Genero;
 import com.gakki.store.validation.SenhaForte;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;

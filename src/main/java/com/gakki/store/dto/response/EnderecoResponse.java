@@ -1,7 +1,7 @@
 package com.gakki.store.dto.response;
 
-import com.gakki.store.domain.enums.TipoLogradouro;
-import com.gakki.store.domain.enums.TipoResidencia;
+import com.gakki.store.domain.cliente.enums.TipoLogradouro;
+import com.gakki.store.domain.cliente.enums.TipoResidencia;
 
 public record EnderecoResponse(
         Long id,

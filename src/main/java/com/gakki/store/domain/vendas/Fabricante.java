@@ -1,4 +1,4 @@
-package com.gakki.store.domain;
+package com.gakki.store.domain.vendas;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,15 +10,15 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-// Categoria de instrumento. Um instrumento pode ter mais de uma (RN0012).
-// Tabela de domínio, populada por migration (RNF0013).
+// Fabricante/marca do instrumento. Equivale à "editora" do DRS, que é
+// redigido sobre o domínio de livraria (RN0011).
 
 @Entity
-@Table(name = "categoria")
+@Table(name = "fabricante")
 @Getter
 @Setter
 @NoArgsConstructor
-public class Categoria {
+public class Fabricante {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -32,14 +32,14 @@ public class Categoria {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof Categoria outra)) {
+        if (!(o instanceof Fabricante outro)) {
             return false;
         }
-        return id != null && id.equals(outra.getId());
+        return id != null && id.equals(outro.getId());
     }
 
     @Override
     public int hashCode() {
-        return Categoria.class.hashCode();
+        return Fabricante.class.hashCode();
     }
 }

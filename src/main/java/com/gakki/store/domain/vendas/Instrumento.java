@@ -1,4 +1,4 @@
-package com.gakki.store.domain;
+package com.gakki.store.domain.vendas;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

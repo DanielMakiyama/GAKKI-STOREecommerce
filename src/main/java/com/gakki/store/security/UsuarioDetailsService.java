@@ -1,6 +1,6 @@
 package com.gakki.store.security;
 
-import com.gakki.store.domain.Usuario;
+import com.gakki.store.domain.cliente.Usuario;
 import com.gakki.store.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;

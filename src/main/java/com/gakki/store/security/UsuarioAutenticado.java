@@ -1,7 +1,7 @@
 package com.gakki.store.security;
 
-import com.gakki.store.domain.Usuario;
-import com.gakki.store.domain.enums.Papel;
+import com.gakki.store.domain.cliente.Usuario;
+import com.gakki.store.domain.cliente.enums.Papel;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;

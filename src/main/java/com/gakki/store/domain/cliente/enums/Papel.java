@@ -1,4 +1,4 @@
-package com.gakki.store.domain.enums;
+package com.gakki.store.domain.cliente.enums;
 
 /**
  * Perfil de acesso do usuário.

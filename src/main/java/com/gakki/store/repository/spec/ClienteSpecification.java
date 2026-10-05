@@ -1,6 +1,6 @@
 package com.gakki.store.repository.spec;
 
-import com.gakki.store.domain.Cliente;
+import com.gakki.store.domain.cliente.Cliente;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.util.ArrayList;

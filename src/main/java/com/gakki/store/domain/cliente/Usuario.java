@@ -1,6 +1,6 @@
-package com.gakki.store.domain;
+package com.gakki.store.domain.cliente;
 
-import com.gakki.store.domain.enums.Papel;
+import com.gakki.store.domain.cliente.enums.Papel;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

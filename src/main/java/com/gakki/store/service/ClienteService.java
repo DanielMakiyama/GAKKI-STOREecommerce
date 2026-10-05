@@ -1,8 +1,8 @@
 package com.gakki.store.service;
 
-import com.gakki.store.domain.Cliente;
-import com.gakki.store.domain.Usuario;
-import com.gakki.store.domain.enums.Papel;
+import com.gakki.store.domain.cliente.Cliente;
+import com.gakki.store.domain.cliente.Usuario;
+import com.gakki.store.domain.cliente.enums.Papel;
 import com.gakki.store.dto.request.AlterarSenhaRequest;
 import com.gakki.store.dto.request.AtualizarClienteRequest;
 import com.gakki.store.dto.request.RegistrarClienteRequest;

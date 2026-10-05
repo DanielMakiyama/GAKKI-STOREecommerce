@@ -1,6 +1,6 @@
 package com.gakki.store.dto.request;
 
-import com.gakki.store.domain.enums.TipoTelefone;
+import com.gakki.store.domain.cliente.enums.TipoTelefone;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 

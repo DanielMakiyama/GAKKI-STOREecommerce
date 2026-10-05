@@ -1,6 +1,6 @@
 package com.gakki.store.repository;
 
-import com.gakki.store.domain.Usuario;
+import com.gakki.store.domain.cliente.Usuario;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

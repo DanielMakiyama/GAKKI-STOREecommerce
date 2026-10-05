@@ -1,6 +1,6 @@
 package com.gakki.store.dto.response;
 
-import com.gakki.store.domain.enums.Papel;
+import com.gakki.store.domain.cliente.enums.Papel;
 
 /**
  * Resposta da autenticação.

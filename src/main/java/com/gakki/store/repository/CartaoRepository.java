@@ -1,6 +1,6 @@
 package com.gakki.store.repository;
 
-import com.gakki.store.domain.Cartao;
+import com.gakki.store.domain.cliente.Cartao;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;

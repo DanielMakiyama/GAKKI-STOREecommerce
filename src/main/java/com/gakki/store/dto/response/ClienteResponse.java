@@ -1,7 +1,7 @@
 package com.gakki.store.dto.response;
 
-import com.gakki.store.domain.enums.Genero;
-import com.gakki.store.domain.enums.Papel;
+import com.gakki.store.domain.cliente.enums.Genero;
+import com.gakki.store.domain.cliente.enums.Papel;
 
 import java.time.LocalDate;
 

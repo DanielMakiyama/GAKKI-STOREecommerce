@@ -1,6 +1,6 @@
 package com.gakki.store.repository;
 
-import com.gakki.store.domain.Bandeira;
+import com.gakki.store.domain.cliente.Bandeira;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

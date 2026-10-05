@@ -1,8 +1,8 @@
 package com.gakki.store.mapper;
 
-import com.gakki.store.domain.Bandeira;
-import com.gakki.store.domain.Cartao;
-import com.gakki.store.domain.Cliente;
+import com.gakki.store.domain.cliente.Bandeira;
+import com.gakki.store.domain.cliente.Cartao;
+import com.gakki.store.domain.cliente.Cliente;
 import com.gakki.store.dto.request.CartaoRequest;
 import com.gakki.store.dto.response.BandeiraResponse;
 import com.gakki.store.dto.response.CartaoResponse;

@@ -1,7 +1,7 @@
 package com.gakki.store.service;
 
-import com.gakki.store.domain.Cliente;
-import com.gakki.store.domain.Endereco;
+import com.gakki.store.domain.cliente.Cliente;
+import com.gakki.store.domain.cliente.Endereco;
 import com.gakki.store.dto.request.EnderecoRequest;
 import com.gakki.store.dto.response.EnderecoResponse;
 import com.gakki.store.exception.ConflitoException;

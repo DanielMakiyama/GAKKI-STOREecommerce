@@ -1,6 +1,6 @@
 package com.gakki.store.service;
 
-import com.gakki.store.domain.Cliente;
+import com.gakki.store.domain.cliente.Cliente;
 import com.gakki.store.dto.request.LoginRequest;
 import com.gakki.store.dto.request.RenovarTokenRequest;
 import com.gakki.store.dto.response.LoginResponse;
