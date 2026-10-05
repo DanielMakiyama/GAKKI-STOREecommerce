@@ -21,6 +21,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
@@ -78,10 +79,17 @@ public class Pedido {
     @Column(name = "criado_em", nullable = false, updatable = false)
     private OffsetDateTime criadoEm;
 
+    // @BatchSize: na listagem "meus pedidos", que é paginada, as duas
+    // coleções não podem vir por JOIN FETCH — paginar com fetch de
+    // coleção faz o Hibernate paginar em memória. Com o batch, uma
+    // página de 20 pedidos carrega os itens de todos em UMA consulta
+    // extra, em vez de uma por pedido.
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 20)
     private List<ItemPedido> itens = new ArrayList<>();
 
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 20)
     private List<Pagamento> pagamentos = new ArrayList<>();
 
     public void adicionarItem(ItemPedido item) {
