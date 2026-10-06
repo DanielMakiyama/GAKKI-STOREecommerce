@@ -3,6 +3,7 @@ package com.gakki.store.e2e;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.math.BigDecimal;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -43,10 +44,7 @@ public final class ApiDeApoio {
     }
 
     public static int statusDaListagemDeClientes(String token) {
-        HttpRequest requisicao = requisicao("/clientes")
-                .GET()
-                .header("Authorization", "Bearer " + token)
-                .build();
+        HttpRequest requisicao = autenticada("/clientes", token).GET().build();
         try {
             return CLIENTE.send(requisicao, HttpResponse.BodyHandlers.ofString()).statusCode();
         } catch (Exception e) {
@@ -66,10 +64,7 @@ public final class ApiDeApoio {
 
     //Id do cliente a partir do e-mail, via consulta administrativa (RF0024)
     public static long idDoCliente(String tokenAdmin, String email) {
-        JsonNode pagina = enviar(requisicao("/clientes?email=" + email)
-                .GET()
-                .header("Authorization", "Bearer " + tokenAdmin)
-                .build());
+        JsonNode pagina = enviar(autenticada("/clientes?email=" + email, tokenAdmin).GET().build());
 
         JsonNode conteudo = pagina.get("content");
         if (conteudo == null || conteudo.isEmpty()) {
@@ -88,15 +83,137 @@ public final class ApiDeApoio {
     }
 
     private static void alternarStatus(String tokenAdmin, long clienteId, String acao) {
-        enviarSemCorpo(requisicao("/clientes/" + clienteId + "/" + acao)
+        enviarSemCorpo(autenticada("/clientes/" + clienteId + "/" + acao, tokenAdmin)
                 .method("PATCH", HttpRequest.BodyPublishers.noBody())
-                .header("Authorization", "Bearer " + tokenAdmin)
                 .build());
     }
+
+    // ------------------------------------------------------------
+    // Catálogo (RF0011) — rota pública, não leva token
+    //
+    // O teste conhece o instrumento pelo código do seed (INST-0005), não
+    // pelo id: id é BIGSERIAL e muda a cada recriação do schema, então
+    // fixá-lo no código do caso só adiaria uma quebra.
+    // ------------------------------------------------------------
+
+    public static long idDoInstrumento(String codigo) {
+        return instrumento(codigo).get("id").asLong();
+    }
+
+    public static int estoqueDoInstrumento(String codigo) {
+        return instrumento(codigo).get("quantidadeEstoque").asInt();
+    }
+
+    public static BigDecimal precoDoInstrumento(String codigo) {
+        // asText e não asDouble: o valor é monetário e vira BigDecimal
+        // sem passar por binário de ponto flutuante.
+        return new BigDecimal(instrumento(codigo).get("valorVenda").asText());
+    }
+
+    private static JsonNode instrumento(String codigo) {
+        JsonNode pagina = enviar(requisicao("/instrumentos?size=100").GET().build());
+        for (JsonNode item : pagina.get("content")) {
+            if (codigo.equals(item.get("codigo").asText())) {
+                return item;
+            }
+        }
+        throw new IllegalStateException(
+                "Nenhum instrumento com o código " + codigo + ". O seed V999 foi aplicado?");
+    }
+
+    // ------------------------------------------------------------
+    // Carrinho (RF0031, RF0032)
+    // ------------------------------------------------------------
+
+    /**
+     * Deixa o carrinho vazio.
+     *
+     * <p>Cada caso precisa disso no início: o carrinho é 1:1 com o
+     * cliente e sobrevive entre execuções, então sobra de um caso
+     * anterior entraria na conta do seguinte. Não existe
+     * {@code DELETE /carrinho}, por isso a remoção é item a item.
+     */
+    public static void limparCarrinho(String token) {
+        JsonNode carrinho = enviar(autenticada("/carrinho", token).GET().build());
+        for (JsonNode item : carrinho.get("itens")) {
+            long itemId = item.get("itemId").asLong();
+            enviarSemCorpo(autenticada("/carrinho/itens/" + itemId, token).DELETE().build());
+        }
+    }
+
+    /** Atalho para montar carrinho sem gastar passos de tela. */
+    public static void adicionarAoCarrinho(String token, long instrumentoId, int quantidade) {
+        String corpo = """
+                {"instrumentoId":%d,"quantidade":%d}""".formatted(instrumentoId, quantidade);
+        enviar(autenticada("/carrinho/itens", token)
+                .POST(HttpRequest.BodyPublishers.ofString(corpo))
+                .header("Content-Type", "application/json")
+                .build());
+    }
+
+    public static BigDecimal totalDoCarrinho(String token) {
+        JsonNode carrinho = enviar(autenticada("/carrinho", token).GET().build());
+        return new BigDecimal(carrinho.get("valorTotal").asText());
+    }
+
+    // ------------------------------------------------------------
+    // Endereços, cartões e cupons do cliente autenticado
+    // ------------------------------------------------------------
+
+    public static long idDoEnderecoPrincipal(String token) {
+        JsonNode enderecos = enviar(autenticada("/clientes/me/enderecos", token).GET().build());
+        for (JsonNode endereco : enderecos) {
+            if (endereco.get("principal").asBoolean()) {
+                return endereco.get("id").asLong();
+            }
+        }
+        return enderecos.get(0).get("id").asLong();
+    }
+
+    public static int quantidadeDeEnderecos(String token) {
+        JsonNode enderecos = enviar(autenticada("/clientes/me/enderecos", token).GET().build());
+        int total = 0;
+        for (JsonNode ignorado : enderecos) {
+            total++;
+        }
+        return total;
+    }
+
+    public static int quantidadeDeCartoes(String token) {
+        JsonNode cartoes = enviar(autenticada("/clientes/me/cartoes", token).GET().build());
+        int total = 0;
+        for (JsonNode ignorado : cartoes) {
+            total++;
+        }
+        return total;
+    }
+
+    /**
+     * Códigos dos cupons do cliente.
+     *
+     * <p>Comparar a lista antes e depois da compra é como o caso da
+     * RN0036 identifica o cupom de troco: o código vem da sequence da
+     * V14 e incrementa a cada emissão, então afirmar
+     * {@code "TROCA-1000"} funcionaria só na primeira execução.
+     */
+    public static List<String> codigosDosCupons(String token) {
+        JsonNode cupons = enviar(autenticada("/cupons", token).GET().build());
+        List<String> codigos = new ArrayList<>();
+        cupons.forEach(cupom -> codigos.add(cupom.get("codigo").asText()));
+        return codigos;
+    }
+
+    // ------------------------------------------------------------
+    // Plumbing
+    // ------------------------------------------------------------
 
     private static HttpRequest.Builder requisicao(String caminho) {
         return HttpRequest.newBuilder(URI.create(URL_API + caminho))
                 .timeout(Duration.ofSeconds(15));
+    }
+
+    private static HttpRequest.Builder autenticada(String caminho, String token) {
+        return requisicao(caminho).header("Authorization", "Bearer " + token);
     }
 
     private static JsonNode enviar(HttpRequest requisicao) {
