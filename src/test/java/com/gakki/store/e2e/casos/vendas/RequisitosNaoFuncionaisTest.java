@@ -10,15 +10,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Requisitos não funcionais do fluxo — RNF0011 e RNF0012.
- *
- * <p>Tempo de resposta das consultas e registro de log das operações de
- * escrita. Os dois estão nomeados no escopo do enunciado e nenhum dos
- * dois é visível na interface, então ambos são verificados nas suas
- * fontes: o relógio para o primeiro, a tabela {@code log_transacao}
- * para o segundo.
- */
+//Requisitos não funcionais do fluxo — RNF0011 e RNF0012.
+
 class RequisitosNaoFuncionaisTest extends BaseVendasE2ETest {
 
     @Test

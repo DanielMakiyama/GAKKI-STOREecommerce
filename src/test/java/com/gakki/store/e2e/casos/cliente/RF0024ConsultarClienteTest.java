@@ -1,4 +1,4 @@
-package com.gakki.store.e2e.casos;
+package com.gakki.store.e2e.casos.cliente;
 
 import com.gakki.store.e2e.ApiDeApoio;
 import com.gakki.store.e2e.BaseE2ETest;
