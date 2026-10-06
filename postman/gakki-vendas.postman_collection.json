@@ -1,0 +1,739 @@
+{
+  "info": {
+    "name": "GAKKI STORE — Vendas (RF0031 a RF0038)",
+    "description": "Caminho feliz da criação de pedido, na ordem do roteiro da apresentação.\n\nCOMO USAR\n1. Suba o backend (porta 8080) com o banco recriado pelo seed V999.\n2. Collection > ... > Run collection. Roda os 18 na ordem e todas as asserções passam.\n\nNenhum id é digitado à mão: os scripts da aba Tests preenchem as variáveis da collection.\nOs requests 13 e 15 repõem o carrinho depois de cada compra fechada — sem eles os cenários de pagamento rodariam com o carrinho vazio.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api/v1"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "cordasId",
+      "value": ""
+    },
+    {
+      "key": "guitarraId",
+      "value": ""
+    },
+    {
+      "key": "interfaceId",
+      "value": ""
+    },
+    {
+      "key": "enderecoId",
+      "value": ""
+    },
+    {
+      "key": "cartaoPrincipalId",
+      "value": ""
+    },
+    {
+      "key": "cartaoReservaId",
+      "value": ""
+    },
+    {
+      "key": "itemId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "01 Login (cliente de demonstração)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.collectionVariables.set('token', body.token);",
+              "console.log('Token guardado. Perfil:', body.perfil, '| Nome:', body.nome);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"cliente@gakkistore.com\",\n  \"senha\": \"Cliente@2026\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "login"
+          ]
+        },
+        "description": "Guarda o token na variável {{token}}, usada por todas as outras chamadas."
+      }
+    },
+    {
+      "name": "02 Catálogo (público, sem token)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "const itens = pm.response.json().content;",
+              "pm.test('5 instrumentos do seed', () => pm.expect(itens.length).to.eql(5));",
+              "",
+              "const porCodigo = (c) => itens.find(i => i.codigo === c);",
+              "pm.collectionVariables.set('cordasId',    porCodigo('INST-0005').id);",
+              "pm.collectionVariables.set('guitarraId',  porCodigo('INST-0001').id);",
+              "pm.collectionVariables.set('interfaceId', porCodigo('INST-0004').id);",
+              "",
+              "pm.test('cordas custam 35.00', () => pm.expect(Number(porCodigo('INST-0005').valorVenda)).to.eql(35));",
+              "pm.test('interface tem 2 em estoque', () => pm.expect(porCodigo('INST-0004').quantidadeEstoque).to.eql(2));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/instrumentos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "instrumentos"
+          ]
+        },
+        "description": "Rota pública — repare que vai SEM token e responde 200 do mesmo jeito."
+      }
+    },
+    {
+      "name": "03 Meus endereços",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "const enderecos = pm.response.json();",
+              "const principal = enderecos.find(e => e.principal) || enderecos[0];",
+              "pm.collectionVariables.set('enderecoId', principal.id);",
+              "console.log('Endereço de entrega:', principal.cidade + '/' + principal.estado);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/clientes/me/enderecos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "clientes",
+            "me",
+            "enderecos"
+          ]
+        }
+      }
+    },
+    {
+      "name": "04 Meus cartões",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "const cartoes = pm.response.json();",
+              "pm.collectionVariables.set('cartaoPrincipalId', cartoes.find(c => c.preferencial).id);",
+              "pm.collectionVariables.set('cartaoReservaId',  cartoes.find(c => !c.preferencial).id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/clientes/me/cartoes",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "clientes",
+            "me",
+            "cartoes"
+          ]
+        }
+      }
+    },
+    {
+      "name": "05 Meus cupons",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "const cupons = pm.response.json();",
+              "pm.test('4 cupons do seed', () => pm.expect(cupons.length).to.eql(4));",
+              "console.log(cupons.map(c => c.codigo + ' R$' + c.valor).join(' | '));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/cupons",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "cupons"
+          ]
+        }
+      }
+    },
+    {
+      "name": "06 Adicionar cordas ao carrinho (RF0031)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "const carrinho = pm.response.json();",
+              "pm.collectionVariables.set('itemId', carrinho.itens[0].itemId);",
+              "pm.test('total 35.00', () => pm.expect(Number(carrinho.valorTotal)).to.eql(35));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"instrumentoId\": {{cordasId}},\n  \"quantidade\": 1\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/carrinho/itens",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "carrinho",
+            "itens"
+          ]
+        },
+        "description": "Devolve o carrinho inteiro, não só o item — a tela precisa do total novo na mesma resposta."
+      }
+    },
+    {
+      "name": "07 Estoque insuficiente → 400 (RN0031)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('400', () => pm.response.to.have.status(400));",
+              "pm.test('ProblemDetail com detail', () => pm.expect(pm.response.json()).to.have.property('detail'));",
+              "console.log(pm.response.json().detail);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"instrumentoId\": {{interfaceId}},\n  \"quantidade\": 3\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/carrinho/itens",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "carrinho",
+            "itens"
+          ]
+        },
+        "description": "A interface Focusrite tem 2 em estoque. Pedir 3 é recusado pela RN0031."
+      }
+    },
+    {
+      "name": "08 Alterar quantidade (RF0032)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "pm.test('total 105.00 (3 x 35)', () => pm.expect(Number(pm.response.json().valorTotal)).to.eql(105));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"quantidade\": 3\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/carrinho/itens/{{itemId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "carrinho",
+            "itens",
+            "{{itemId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "09 Voltar para 1 unidade",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "pm.test('total 35.00', () => pm.expect(Number(pm.response.json().valorTotal)).to.eql(35));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"quantidade\": 1\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/carrinho/itens/{{itemId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "carrinho",
+            "itens",
+            "{{itemId}}"
+          ]
+        },
+        "description": "Deixa o carrinho com 1 unidade para os cenários de pagamento fecharem em R$ 50,00."
+      }
+    },
+    {
+      "name": "10 Frete (RF0034)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "const f = pm.response.json();",
+              "pm.test('frete 15.00 (1 peça, SP)', () => pm.expect(Number(f.valorFrete)).to.eql(15));",
+              "pm.test('total com frete 50.00', () => pm.expect(Number(f.valorTotalComFrete)).to.eql(50));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/carrinho/frete?enderecoEntregaId={{enderecoId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "carrinho",
+            "frete"
+          ],
+          "query": [
+            {
+              "key": "enderecoEntregaId",
+              "value": "{{enderecoId}}"
+            }
+          ]
+        },
+        "description": "R$15 base + R$5 × (peças−1) + R$10 fora de SP. Com 1 peça em São Paulo: R$15."
+      }
+    },
+    {
+      "name": "11 Cupom desnecessário → 400 (RN0036)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('400', () => pm.response.to.have.status(400));",
+              "console.log(pm.response.json().detail);",
+              "pm.test('fala em cupom desnecessário', () =>",
+              "  pm.expect(pm.response.json().detail.toLowerCase()).to.include('desnecess'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"enderecoEntregaId\": {{enderecoId}},\n  \"codigosCupom\": [\"TROCA-0001\", \"TROCA-0002\", \"TROCA-0003\"]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/pedidos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "pedidos"
+          ]
+        },
+        "description": "20+40+35 = 95 numa compra de 50. Tirando o menor (20) sobram 75, que já cobrem os 50 — logo o de R$20 está sobrando. Recusado."
+      }
+    },
+    {
+      "name": "12 Dois cupons com troco → 201 (RN0036)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('201', () => pm.response.to.have.status(201));",
+              "pm.test('tem header Location', () => pm.expect(pm.response.headers.has('Location')).to.be.true);",
+              "const p = pm.response.json();",
+              "pm.test('status EM_PROCESSAMENTO (RF0038)', () => pm.expect(p.status).to.eql('EM_PROCESSAMENTO'));",
+              "pm.test('valor total 50.00', () => pm.expect(Number(p.valorTotal)).to.eql(50));",
+              "pm.test('dois cupons usados', () => pm.expect(p.cuponsUtilizados.length).to.eql(2));",
+              "pm.test('troco de 25.00', () => pm.expect(Number(p.cupomTrocoGerado.valor)).to.eql(25));",
+              "console.log('Pedido', p.numero, '| troco:', p.cupomTrocoGerado.codigo, 'R$', p.cupomTrocoGerado.valor);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"enderecoEntregaId\": {{enderecoId}},\n  \"codigosCupom\": [\"TROCA-0002\", \"TROCA-0003\"]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/pedidos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "pedidos"
+          ]
+        },
+        "description": "40+35 = 75 numa compra de 50 → emite cupom de troco de R$25. É o exemplo numérico do DRS, reproduzido literalmente.\n\nATENÇÃO: esvazia o carrinho. Para rodar os cenários 13 e 14, repita a chamada 06."
+      }
+    },
+    {
+      "name": "13 Repor carrinho — cordas",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "const carrinho = pm.response.json();",
+              "pm.collectionVariables.set('itemId', carrinho.itens[0].itemId);",
+              "console.log('Carrinho reposto. Total R$', carrinho.valorTotal);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"instrumentoId\": {{cordasId}},\n  \"quantidade\": 1\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/carrinho/itens",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "carrinho",
+            "itens"
+          ]
+        },
+        "description": "O request anterior esvaziou o carrinho ao fechar o pedido. Repõe 1 jogo de cordas: total volta a R$ 50,00 com frete."
+      }
+    },
+    {
+      "name": "14 Cartão + cupom, cartão abaixo de R$10 (RN0035)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('201', () => pm.response.to.have.status(201));",
+              "const p = pm.response.json();",
+              "pm.test('cartão recebeu 5.00', () => pm.expect(Number(p.pagamentosCartao[0].valor)).to.eql(5));",
+              "pm.test('sem troco', () => pm.expect(p.cupomTrocoGerado).to.be.null);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"enderecoEntregaId\": {{enderecoId}},\n  \"pagamentosCartao\": [\n    { \"cartaoCreditoId\": {{cartaoPrincipalId}}, \"valor\": 5.00 }\n  ],\n  \"codigosCupom\": [\"PROMO-0001\"]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/pedidos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "pedidos"
+          ]
+        },
+        "description": "Compra de R$50, cupom promocional de R$45 → restam R$5 no cartão.\n\nSem cupom esses R$5 seriam recusados pela RN0034; a RN0035 é exatamente a exceção que permite."
+      }
+    },
+    {
+      "name": "15 Repor carrinho — guitarra",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "const carrinho = pm.response.json();",
+              "pm.collectionVariables.set('itemId', carrinho.itens[0].itemId);",
+              "console.log('Carrinho reposto. Total R$', carrinho.valorTotal);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"instrumentoId\": {{guitarraId}},\n  \"quantidade\": 1\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/carrinho/itens",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "carrinho",
+            "itens"
+          ]
+        },
+        "description": "Guitarra de R$1.400. Com o frete de R$15 o total vira R$1.415, divisível em dois cartões acima do piso de R$10."
+      }
+    },
+    {
+      "name": "16 Dois cartões, piso de R$10 (RN0034)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('201', () => pm.response.to.have.status(201));",
+              "const p = pm.response.json();",
+              "pm.test('duas linhas de cartão', () => pm.expect(p.pagamentosCartao.length).to.eql(2));",
+              "pm.test('total 1415.00', () => pm.expect(Number(p.valorTotal)).to.eql(1415));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"enderecoEntregaId\": {{enderecoId}},\n  \"pagamentosCartao\": [\n    { \"cartaoCreditoId\": {{cartaoPrincipalId}}, \"valor\": 1000.00 },\n    { \"cartaoCreditoId\": {{cartaoReservaId}},  \"valor\": 415.00 }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/pedidos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "pedidos"
+          ]
+        },
+        "description": "Total R$1.415 dividido em R$1.000 + R$415. As duas linhas acima do piso de R$10 que a RN0034 exige."
+      }
+    },
+    {
+      "name": "17 Meus pedidos (RF0038)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "const pagina = pm.response.json();",
+              "pm.test('resposta paginada', () => pm.expect(pagina).to.have.property('content'));",
+              "pagina.content.forEach(p => console.log(p.numero, p.status, 'R$' + p.valorTotal));",
+              "pm.test('todos EM_PROCESSAMENTO', () =>",
+              "  pm.expect(pagina.content.every(p => p.status === 'EM_PROCESSAMENTO')).to.be.true);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/pedidos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "pedidos"
+          ]
+        }
+      }
+    },
+    {
+      "name": "18 Cupons depois das compras",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "const cupons = pm.response.json();",
+              "const troco = cupons.filter(c => c.codigo.startsWith('TROCA-1'));",
+              "pm.test('cupom de troco foi emitido', () => pm.expect(troco.length).to.be.above(0));",
+              "pm.test('5 cupons: 4 do seed + o troco', () => pm.expect(cupons.length).to.eql(5));",
+              "cupons.forEach(c => console.log(c.codigo, 'R$' + c.valor, c.utilizado ? '(utilizado)' : '(disponivel)'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/cupons",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "cupons"
+          ]
+        },
+        "description": "Os cupons usados aparecem como 'utilizado' e o TROCA-1000 novo como 'disponível'. É aqui que a emissão do troco fica visível para o teste de interface."
+      }
+    }
+  ]
+}
