@@ -5,6 +5,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.time.OffsetDateTime;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -102,6 +103,47 @@ public final class BancoDeApoio {
             try (ResultSet resultado = comando.executeQuery()) {
                 resultado.next();
                 return resultado.getInt(1);
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException("Falha ao consultar log_transacao em " + URL, e);
+        }
+    }
+
+    /**
+     * Uma linha do log de auditoria (RNF0012).
+     *
+     * <p>A regra exige "data, hora, usuário responsável além de manter os
+     * dados alterados" — os quatro campos estão aqui para o teste poder
+     * afirmar sobre cada um, em vez de só contar linhas.
+     */
+    public record Log(String entidade, String entidadeId, String operacao,
+                      String usuarioEmail, String dadosAlterados, OffsetDateTime criadoEm) {
+    }
+
+    /** Linha mais recente do log para uma entidade, ou {@code null}. */
+    public static Log ultimoLog(String entidade) {
+        String sql = """
+                SELECT entidade, entidade_id, operacao, usuario_email,
+                       dados_alterados::text AS dados, criado_em
+                  FROM log_transacao
+                 WHERE entidade = ?
+                 ORDER BY id DESC
+                 LIMIT 1""";
+        try (Connection conexao = conectar();
+             PreparedStatement comando = conexao.prepareStatement(sql)) {
+
+            comando.setString(1, entidade);
+            try (ResultSet r = comando.executeQuery()) {
+                if (!r.next()) {
+                    return null;
+                }
+                return new Log(
+                        r.getString("entidade"),
+                        r.getString("entidade_id"),
+                        r.getString("operacao"),
+                        r.getString("usuario_email"),
+                        r.getString("dados"),
+                        r.getObject("criado_em", OffsetDateTime.class));
             }
         } catch (Exception e) {
             throw new IllegalStateException("Falha ao consultar log_transacao em " + URL, e);

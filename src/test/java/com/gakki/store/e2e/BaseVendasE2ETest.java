@@ -12,7 +12,11 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.Select;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Passos compartilhados pelos casos de venda.
@@ -29,13 +33,23 @@ import java.util.List;
  */
 public abstract class BaseVendasE2ETest extends BaseE2ETest {
 
-    // Códigos do seed V999. O id é resolvido em tempo de execução: é
-    // BIGSERIAL e muda a cada recriação do schema.
+    // Códigos do seed V999, com os preços que as asserções dos casos
+    // conferem: guitarra 1400, teclado 2800, pedal 700, interface 1260
+    // (estoque 2), cordas 35, telecaster 1680 (estoque 0).
+    //
+    // O id é resolvido em tempo de execução: é BIGSERIAL e muda a cada
+    // recriação do schema, então fixá-lo no código só adiaria uma quebra.
     protected static final String GUITARRA = "INST-0001";
     protected static final String TECLADO = "INST-0002";
     protected static final String PEDAL = "INST-0003";
     protected static final String INTERFACE_DE_AUDIO = "INST-0004";
     protected static final String CORDAS = "INST-0005";
+
+    /** Estoque zero no seed — existe para a RN0031 poder ser demonstrada. */
+    protected static final String ESGOTADO = "INST-0006";
+
+    /** RNF0011 — "tempo de resposta das consultas". */
+    protected static final long LIMITE_RNF0011_MS = 1000L;
 
     /**
      * Cartão de perfil do Login.jsx (atributo {@code data-perfil}).
@@ -147,6 +161,23 @@ public abstract class BaseVendasE2ETest extends BaseE2ETest {
         esperarQuantidade(PaginaCarrinho.ITENS, linhasAntes - 1);
     }
 
+    /**
+     * Posição da linha do carrinho pelo nome do produto.
+     *
+     * <p>Contar na ordem em que o backend devolve os itens funcionaria
+     * hoje, mas amarraria o teste a um detalhe que nenhum requisito
+     * garante. Procurar pelo nome é o que o cliente faz.
+     */
+    protected int indiceDaLinha(String nomeParcial) {
+        List<WebElement> nomes = navegador.findElements(PaginaCarrinho.NOMES);
+        for (int i = 0; i < nomes.size(); i++) {
+            if (nomes.get(i).getText().contains(nomeParcial)) {
+                return i;
+            }
+        }
+        throw new AssertionError("Nenhuma linha do carrinho com \"" + nomeParcial + "\"");
+    }
+
     // ------------------------------------------------------------
     // Checkout — endereço
     // ------------------------------------------------------------
@@ -206,6 +237,21 @@ public abstract class BaseVendasE2ETest extends BaseE2ETest {
         campo.sendKeys(Keys.chord(Keys.CONTROL, "a"), valor);
     }
 
+    /**
+     * Acrescenta linha de cartão apontando para o cartão mais recente da
+     * lista — o que acabou de ser cadastrado pelo checkout.
+     *
+     * <p>A posição é contada em tempo de execução em vez de fixada: o
+     * cliente de demonstração tem dois cartões no seed, mas afirmar "é o
+     * índice 2" quebraria se o seed ganhasse um terceiro.
+     */
+    protected void pagarRestanteNoUltimoCartao() {
+        int linha = acrescentarLinhaDePagamento();
+        WebElement seletor = navegador.findElements(PaginaCheckout.SELECT_DO_CARTAO).get(linha);
+        Select select = new Select(seletor);
+        select.selectByIndex(select.getOptions().size() - 1);
+    }
+
     private int acrescentarLinhaDePagamento() {
         int linhasAntes = navegador.findElements(PaginaCheckout.LINHA_DE_PAGAMENTO).size();
         clicar(PaginaCheckout.BOTAO_USAR_CARTAO);
@@ -220,19 +266,35 @@ public abstract class BaseVendasE2ETest extends BaseE2ETest {
         new Select(seletor).selectByIndex(indiceDoCartao);
     }
 
-    /** Cadastra cartão pelo checkout (RF0036, RN0024, RN0025). */
-    protected void cadastrarCartao(String apelido, String ultimosDigitos, String bandeira,
-                                   String validade, String titular) {
+    /**
+     * Cadastra cartão pelo checkout (RF0036, RN0024, RN0025).
+     *
+     * @param indiceDaBandeira posição no {@code <select>} de bandeiras,
+     *                         contando o "Selecione…" como 0 — então a
+     *                         primeira bandeira real é 1. Por posição, e
+     *                         não por value, porque o value é o id no
+     *                         banco e muda a cada recriação do schema.
+     */
+    protected void cadastrarCartao(String apelido, String ultimosDigitos, int indiceDaBandeira,
+                                   String mes, String ano, String titular) {
         clicar(PaginaCheckout.BOTAO_CADASTRAR_CARTAO);
         preencher(PaginaCheckout.CARTAO_APELIDO, apelido);
         preencher(PaginaCheckout.CARTAO_DIGITOS, ultimosDigitos);
-        preencher(PaginaCheckout.CARTAO_BANDEIRA, bandeira);
-        preencher(PaginaCheckout.CARTAO_VALIDADE, validade);
+        selecionarPorIndice(PaginaCheckout.CARTAO_BANDEIRA, indiceDaBandeira);
+        selecionarPorValor(PaginaCheckout.CARTAO_MES, mes);
+        selecionarPorValor(PaginaCheckout.CARTAO_ANO, ano);
         preencher(PaginaCheckout.CARTAO_TITULAR, titular);
         clicar(PaginaCheckout.BOTAO_SALVAR_CARTAO);
 
-        // O formulário embutido desaparece quando o cartão é aceito.
-        esperarPor(PaginaCheckout.BOTAO_CADASTRAR_CARTAO);
+        // O botão "Cadastrar cartão" fica visível o tempo todo, então
+        // esperar por ele não prova nada: o sinal de que o cartão foi
+        // aceito é o formulário embutido sumir.
+        esperarQuantidade(PaginaCheckout.BOTAO_SALVAR_CARTAO, 0);
+    }
+
+    /** Ano de validade sempre no futuro, sem data fixa no código. */
+    protected static String anoDeValidadeFuturo() {
+        return String.valueOf(LocalDate.now().getYear() + 2);
     }
 
     // ------------------------------------------------------------
@@ -243,6 +305,12 @@ public abstract class BaseVendasE2ETest extends BaseE2ETest {
         preencher(PaginaCheckout.CAMPO_CUPOM, codigo);
         clicar(PaginaCheckout.BOTAO_ADICIONAR_CUPOM);
         esperarPor(PaginaCheckout.tagDoCupom(codigo));
+    }
+
+    /** Tira um cupom da seleção clicando na própria tag (RN0036). */
+    protected void removerCupom(String codigo) {
+        clicar(PaginaCheckout.tagDoCupom(codigo));
+        esperarQuantidade(PaginaCheckout.tagDoCupom(codigo), 0);
     }
 
     protected void confirmarPedido() {
@@ -316,5 +384,45 @@ public abstract class BaseVendasE2ETest extends BaseE2ETest {
     /** Códigos que apareceram em {@code depois} e não estavam em {@code antes}. */
     protected static List<String> cuponsNovos(List<String> antes, List<String> depois) {
         return depois.stream().filter(codigo -> !antes.contains(codigo)).toList();
+    }
+
+    // ------------------------------------------------------------
+    // Asserções do domínio de vendas
+    //
+    // Ficam aqui, e não em cada classe de caso, porque as três carregam
+    // uma decisão sobre COMO comparar — e essa decisão tem de ser a mesma
+    // em toda a suíte.
+    // ------------------------------------------------------------
+
+    /**
+     * Compara valores monetários por {@code compareTo}, não por
+     * {@code equals}: {@code BigDecimal} considera 50 e 50.00 diferentes
+     * porque compara a escala junto.
+     */
+    protected static void assertValor(String esperado, BigDecimal atual, String oQue) {
+        assertEquals(0, new BigDecimal(esperado).compareTo(atual),
+                () -> oQue + " — esperado R$ " + esperado + ", veio R$ " + atual);
+    }
+
+    /**
+     * Compara texto de tela ignorando a caixa.
+     *
+     * <p>{@code getText()} devolve o texto <b>como renderizado</b>, e as
+     * classes {@code .status-tag} e {@code .selo} do index.css têm
+     * {@code text-transform: uppercase}: a tela mostra
+     * "EM PROCESSAMENTO" onde o DOM guarda "Em processamento". Afirmar a
+     * caixa amarraria o teste a uma decisão de estilo, que pode mudar
+     * sem que nenhuma regra de negócio mude.
+     */
+    protected static void assertTexto(String esperado, String atual, String oQue) {
+        assertTrue(esperado.equalsIgnoreCase(atual),
+                () -> oQue + " — esperado \"" + esperado + "\", veio \"" + atual + "\"");
+    }
+
+    /** Limite do RNF0011: 1 segundo por consulta. */
+    protected static void assertRapida(String rota, long milissegundos) {
+        assertTrue(milissegundos < LIMITE_RNF0011_MS,
+                () -> "GET " + rota + " levou " + milissegundos + " ms, acima do limite de "
+                        + LIMITE_RNF0011_MS + " ms (RNF0011)");
     }
 }

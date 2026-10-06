@@ -30,6 +30,14 @@ public final class PaginaCatalogo {
                 + " [data-testid='produto-card-link']");
     }
 
+    // RN0031, primeira cláusula: item indisponível. O selo é a parte
+    // visível da recusa na vitrine; na página do produto o botão de
+    // adicionar nasce desabilitado.
+    public static By seloEsgotadoDoProduto(long instrumentoId) {
+        return By.cssSelector("[data-testid='produto-card'][data-produto-id='" + instrumentoId + "']"
+                + " [data-testid='selo-esgotado']");
+    }
+
     private PaginaCatalogo() {
     }
 }

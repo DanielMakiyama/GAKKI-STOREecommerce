@@ -204,6 +204,31 @@ public final class ApiDeApoio {
     }
 
     // ------------------------------------------------------------
+    // RNF0011 — tempo de resposta das consultas
+    // ------------------------------------------------------------
+
+    /**
+     * Quanto tempo um GET levou, em milissegundos.
+     *
+     * <p>Mede a consulta no backend, não a renderização da tela: o
+     * RNF0011 fala de tempo de resposta, e cravar um limite incluindo
+     * React, rede local e pintura do navegador mediria a máquina, não o
+     * sistema.
+     *
+     * <p>{@code token} nulo faz a chamada sem autenticação, para as
+     * rotas públicas.
+     */
+    public static long duracaoDeConsulta(String caminho, String token) {
+        HttpRequest.Builder construtor = token == null
+                ? requisicao(caminho)
+                : autenticada(caminho, token);
+
+        long inicio = System.nanoTime();
+        enviar(construtor.GET().build());
+        return (System.nanoTime() - inicio) / 1_000_000L;
+    }
+
+    // ------------------------------------------------------------
     // Plumbing
     // ------------------------------------------------------------
 

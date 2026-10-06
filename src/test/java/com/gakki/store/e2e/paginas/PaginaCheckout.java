@@ -48,9 +48,15 @@ public final class PaginaCheckout {
 
     public static final By CARTAO_APELIDO = By.cssSelector("[data-testid='cartao-apelido']");
     public static final By CARTAO_DIGITOS = By.cssSelector("[data-testid='cartao-digitos']");
-    public static final By CARTAO_BANDEIRA = By.cssSelector("[data-testid='cartao-bandeira']");
-    public static final By CARTAO_VALIDADE = By.cssSelector("[data-testid='cartao-validade']");
     public static final By CARTAO_TITULAR = By.cssSelector("[data-testid='cartao-titular']");
+
+    // Três <select>, não campos de texto: a bandeira sai da lista do
+    // sistema (RN0025) e a validade vai em mês e ano separados, como o
+    // CartaoRequest espera.
+    public static final By CARTAO_BANDEIRA = By.cssSelector("[data-testid='cartao-bandeira']");
+    public static final By CARTAO_MES = By.cssSelector("[data-testid='cartao-mes']");
+    public static final By CARTAO_ANO = By.cssSelector("[data-testid='cartao-ano']");
+
     public static final By BOTAO_SALVAR_CARTAO = By.cssSelector("[data-testid='btn-salvar-cartao']");
 
     // ---------- Cupons ----------

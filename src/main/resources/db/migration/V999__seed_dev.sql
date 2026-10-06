@@ -198,7 +198,18 @@ VALUES
    'Encordoamento para guitarra, calibre .010-.046, revestimento Nanoweb.',
    (SELECT id FROM fabricante WHERE nome = 'Elixir'),
    (SELECT id FROM grupo_precificacao WHERE nome = 'Padrão 40%'),
-   2026, 35.00, 50, TRUE);
+   2026, 35.00, 50, TRUE),
+
+  -- Estoque ZERO, de propósito. A RN0031 tem duas cláusulas: não
+  -- adicionar item indisponível E não passar da quantidade disponível.
+  -- Sem um produto esgotado na base, a primeira não tem como ser
+  -- demonstrada — a vitrine mostra o selo "Esgotado" e a página do
+  -- produto desabilita o botão, mas nada disso aparece sem o dado.
+  ('INST-0006', 'Guitarra Fender Telecaster Vintage II',
+   'Edição limitada, corpo em pine, captadores vintage. Sem previsão de reposição.',
+   (SELECT id FROM fabricante WHERE nome = 'Fender'),
+   (SELECT id FROM grupo_precificacao WHERE nome = 'Padrão 40%'),
+   2025, 1680.00, 0, TRUE);
 
 SELECT setval('seq_codigo_instrumento', 5);
 
@@ -210,7 +221,8 @@ INSERT INTO instrumento_categoria (instrumento_id, categoria_id) VALUES
   ((SELECT id FROM instrumento WHERE codigo = 'INST-0003'), (SELECT id FROM categoria WHERE nome = 'Pedais')),
   ((SELECT id FROM instrumento WHERE codigo = 'INST-0004'), (SELECT id FROM categoria WHERE nome = 'Interfaces de Áudio')),
   ((SELECT id FROM instrumento WHERE codigo = 'INST-0005'), (SELECT id FROM categoria WHERE nome = 'Acessórios')),
-  ((SELECT id FROM instrumento WHERE codigo = 'INST-0005'), (SELECT id FROM categoria WHERE nome = 'Guitarras'));
+  ((SELECT id FROM instrumento WHERE codigo = 'INST-0005'), (SELECT id FROM categoria WHERE nome = 'Guitarras')),
+  ((SELECT id FROM instrumento WHERE codigo = 'INST-0006'), (SELECT id FROM categoria WHERE nome = 'Guitarras'));
 
 -- ------------------------------------------------------------
 -- Entrada em estoque (RF0051, RN0050)
@@ -231,6 +243,12 @@ VALUES
    (SELECT id FROM fornecedor WHERE nome = 'Distribuidora Musical Brasil'), 2,  900.00, '2026-09-01'),
   ((SELECT id FROM instrumento WHERE codigo = 'INST-0005'),
    (SELECT id FROM fornecedor WHERE nome = 'Distribuidora Musical Brasil'), 50,  25.00, '2026-09-01');
+
+-- O INST-0006 NÃO tem linha aqui, de propósito. A RN0061 proíbe entrada
+-- com quantidade zero (ck_item_estoque_quantidade), e com razão: esta
+-- tabela registra ENTRADAS em estoque, não saldo. Um produto que nunca
+-- chegou não tem entrada, e o saldo zero vive em
+-- instrumento.quantidade_estoque — que é o campo que a API lê.
 
 -- ------------------------------------------------------------
 -- Cupons (RF0037, RN0033, RN0036)
