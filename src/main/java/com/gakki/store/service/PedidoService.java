@@ -5,13 +5,16 @@ import com.gakki.store.domain.cliente.Cliente;
 import com.gakki.store.domain.cliente.Endereco;
 import com.gakki.store.domain.vendas.Carrinho;
 import com.gakki.store.domain.vendas.Cupom;
+import com.gakki.store.domain.vendas.Instrumento;
 import com.gakki.store.domain.vendas.ItemCarrinho;
+import com.gakki.store.domain.vendas.ItemPedido;
 import com.gakki.store.domain.vendas.Pedido;
 import com.gakki.store.domain.vendas.enums.StatusPedido;
 import com.gakki.store.dto.request.FinalizarCompraRequest;
 import com.gakki.store.dto.request.PagamentoCartaoRequest;
 import com.gakki.store.dto.response.PaginaResponse;
 import com.gakki.store.dto.response.PedidoResponse;
+import com.gakki.store.exception.ConflitoException;
 import com.gakki.store.exception.RecursoNaoEncontradoException;
 import com.gakki.store.exception.RegraDeNegocioException;
 import com.gakki.store.mapper.CarrinhoMapper;
@@ -21,25 +24,37 @@ import com.gakki.store.repository.ClienteRepository;
 import com.gakki.store.repository.EnderecoRepository;
 import com.gakki.store.repository.PedidoRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Locale;
 
 /*
- * RF0038 — finalização da compra.
+ * Ciclo de vida da venda, do carrinho à entrega.
  *
- * É onde cupom e cartão se encontram, e por isso é aqui que moram a
- * RN0034 (piso de R$10 por cartão) e a RN0035 (o piso cai quando há
- * cupom): nenhuma das duas se decide olhando uma linha de pagamento
- * isolada.
+ * Finalização (RF0038) na primeira metade do arquivo; as transições de
+ * status (RN0037 a RN0040) na segunda. É onde cupom e cartão se
+ * encontram, e por isso é aqui que moram a RN0034 (piso de R$10 por
+ * cartão) e a RN0035 (o piso cai quando há cupom): nenhuma das duas se
+ * decide olhando uma linha de pagamento isolada.
  *
- * Nada aqui decrementa estoque: a baixa (RF0053, RN0028) está fora do
- * escopo desta fatia, e o status gravado é sempre EM_PROCESSAMENTO,
- * porque a validação de pagamento (RN0037, RN0038) também está
- * (contrato de Vendas v3, decisões 1 e 2).
+ * O trajeto implementado, nos passos do CDU02:
+ *
+ *   finalizar (P4)  -> EM_PROCESSAMENTO
+ *   confirmarPagamento (P5, P6)
+ *        operadora aprova  -> APROVADA   + baixa em estoque
+ *        operadora recusa   -> REPROVADA  (estoque intacto)
+ *   despachar (P7)  -> EM_TRANSPORTE
+ *   confirmarEntrega (P8) -> ENTREGUE
+ *
+ * A validação da forma de pagamento é um passo à parte, e não o fecho da
+ * finalização, por exigência da própria RF0038: "após a finalização o
+ * status da compra deve ser EM PROCESSAMENTO". Fundir os dois faria o
+ * pedido nascer já aprovado e o status exigido nunca existiria.
  */
 @Service
 @RequiredArgsConstructor
@@ -56,6 +71,7 @@ public class PedidoService {
     private final CupomService cupomService;
     private final CarrinhoMapper carrinhoMapper;
     private final PedidoMapper pedidoMapper;
+    private final OperadoraDeCartao operadora;
 
     /*
      * Uma transação só, do começo ao fim (RF0038).
@@ -116,6 +132,152 @@ public class PedidoService {
         return PaginaResponse.de(
                 pedidoRepository.findByClienteIdOrderByCriadoEmDesc(clienteId, paginacao)
                         .map(pedidoMapper::paraResponse));
+    }
+
+    // ------------------------------------------------------------------
+    // Ciclo de vida do pedido — ações do administrador (P5 a P8 do CDU02)
+    // ------------------------------------------------------------------
+
+    /*
+     * RF0039 — a fila do painel administrativo, com filtro de status
+     * opcional. Sem o filtro devolve todos os pedidos, que é o estado
+     * inicial da aba "Pedidos".
+     */
+    @Transactional(readOnly = true)
+    public PaginaResponse<PedidoResponse> pedidosParaAdministracao(String status, Pageable paginacao) {
+        StatusPedido filtro = statusInformado(status);
+
+        Page<Pedido> pagina = filtro == null
+                ? pedidoRepository.findAllByOrderByCriadoEmDesc(paginacao)
+                : pedidoRepository.findByStatusOrderByCriadoEmDesc(filtro, paginacao);
+
+        return PaginaResponse.de(pagina.map(pedidoMapper::paraResponse));
+    }
+
+    /*
+     * RN0037 e RN0038 — validação da forma de pagamento, e a mudança de
+     * status que ela determina. Corresponde ao ponto de extensão PE1 do
+     * CDU02, instanciado no passo P5.1.
+     *
+     * Aprovada, a compra dá baixa em estoque (RF0053). Reprovada, não dá:
+     * é literalmente o que a RN0028 manda — "somente deve-se dar baixa no
+     * estoque de itens cuja a compra tenha sido efetivada". Por isso a
+     * baixa vive aqui, no passo que decide a efetivação, e não na
+     * finalização.
+     *
+     * PONTO EM ABERTO, não resolvido por suposição: o DRS não diz o que
+     * acontece com os cupons de uma compra REPROVADA. Eles foram
+     * consumidos na finalização (RF0037) e, do jeito que está, continuam
+     * consumidos. Devolvê-los seria comportamento que nenhum requisito
+     * descreve. Registrado para consulta ao professor.
+     */
+    @Transactional
+    public PedidoResponse confirmarPagamento(Long pedidoId) {
+        Pedido pedido = pedidoParaAdministracao(pedidoId);
+        exigirStatus(pedido, StatusPedido.EM_PROCESSAMENTO, "validar o pagamento");
+
+        OperadoraDeCartao.Retorno retorno = operadora.autorizar(pedido);
+
+        if (!retorno.aprovado()) {
+            pedido.setStatus(StatusPedido.REPROVADA);
+            return pedidoMapper.paraResponse(pedido);
+        }
+
+        pedido.setStatus(StatusPedido.APROVADA);
+        darBaixaEmEstoque(pedido);
+        return pedidoMapper.paraResponse(pedido);
+    }
+
+    /*
+     * RF0039 e RN0039 — despacho. Só pedido APROVADA pode ser despachado:
+     * o passo P7.1 do CDU02 diz que o administrador seleciona entre as
+     * compras com esse status.
+     */
+    @Transactional
+    public PedidoResponse despachar(Long pedidoId) {
+        Pedido pedido = pedidoParaAdministracao(pedidoId);
+        exigirStatus(pedido, StatusPedido.APROVADA, "despachar o pedido");
+        pedido.setStatus(StatusPedido.EM_TRANSPORTE);
+        return pedidoMapper.paraResponse(pedido);
+    }
+
+    /*
+     * RF0040 e RN0040 — confirmação de entrega. Fecha o ciclo de vida da
+     * compra e é o que habilita a solicitação de troca, pela RN0043.
+     */
+    @Transactional
+    public PedidoResponse confirmarEntrega(Long pedidoId) {
+        Pedido pedido = pedidoParaAdministracao(pedidoId);
+        exigirStatus(pedido, StatusPedido.EM_TRANSPORTE, "confirmar a entrega");
+        pedido.setStatus(StatusPedido.ENTREGUE);
+        return pedidoMapper.paraResponse(pedido);
+    }
+
+    /*
+     * RF0053 — baixa do total de itens vendidos.
+     *
+     * Mexe na quantidade do próprio instrumento, que é onde vive o saldo.
+     * A tabela item_estoque registra ENTRADAS, não saldo: dar baixa
+     * inserindo linha negativa lá violaria o CHECK da RN0061, que exige
+     * quantidade maior que zero, e com razão.
+     *
+     * Dentro da transação o instrumento é entidade gerenciada, então o
+     * UPDATE sai no commit por dirty checking — não há `save` a chamar.
+     *
+     * O saldo pode ter mudado entre a finalização e a aprovação. Tratar
+     * essa janela é a RN0032, fora do escopo desta fatia; aqui a compra é
+     * barrada com 409 em vez de gravar estoque negativo, e o pedido fica
+     * em EM_PROCESSAMENTO para o administrador decidir.
+     */
+    private void darBaixaEmEstoque(Pedido pedido) {
+        for (ItemPedido item : pedido.getItens()) {
+            Instrumento instrumento = item.getInstrumento();
+            int saldo = instrumento.getQuantidadeEstoque() - item.getQuantidade();
+
+            if (saldo < 0) {
+                throw new ConflitoException(
+                        ("Estoque insuficiente para aprovar o pedido %s: %s tem %d em estoque "
+                                + "e a compra pede %d.")
+                                .formatted(pedido.getNumero(), instrumento.getNome(),
+                                        instrumento.getQuantidadeEstoque(), item.getQuantidade()));
+            }
+            instrumento.setQuantidadeEstoque(saldo);
+        }
+    }
+
+    /*
+     * O ciclo de vida é uma sequência, não um conjunto de interruptores.
+     * Despachar um pedido ainda EM_PROCESSAMENTO pularia a validação de
+     * pagamento e entregaria mercadoria não paga — daí a recusa com 409,
+     * que é conflito de estado, e não erro de requisição.
+     */
+    private void exigirStatus(Pedido pedido, StatusPedido esperado, String acao) {
+        if (pedido.getStatus() != esperado) {
+            throw new ConflitoException(
+                    "Não é possível %s: o pedido %s está em %s e a ação exige %s."
+                            .formatted(acao, pedido.getNumero(),
+                                    rotulo(pedido.getStatus()), rotulo(esperado)));
+        }
+    }
+
+    private Pedido pedidoParaAdministracao(Long pedidoId) {
+        return pedidoRepository.buscarComItensParaAdministracao(pedidoId)
+                .orElseThrow(() -> RecursoNaoEncontradoException.pedido(pedidoId));
+    }
+
+    private StatusPedido statusInformado(String status) {
+        if (status == null || status.isBlank()) {
+            return null;
+        }
+        try {
+            return StatusPedido.valueOf(status.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException excecao) {
+            throw new RegraDeNegocioException("Status de pedido desconhecido: %s.".formatted(status));
+        }
+    }
+
+    private String rotulo(StatusPedido status) {
+        return status.name().replace('_', ' ');
     }
 
     /*
@@ -194,8 +356,8 @@ public class PedidoService {
         pedido.setNumero(proximoNumero());
         pedido.setCliente(cliente);
         pedido.setEnderecoEntrega(endereco);
-        // RF0038 — o status desta fatia é sempre este. Não existe caminho
-        // de aprovação aqui porque a RN0037 está fora de escopo.
+        // RF0038 — a finalização sempre grava este status. A aprovação é
+        // o passo seguinte, em confirmarPagamento.
         pedido.setStatus(StatusPedido.EM_PROCESSAMENTO);
         pedido.setValorFrete(valorFrete);
         pedido.setValorTotal(valorTotal);

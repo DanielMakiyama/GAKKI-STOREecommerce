@@ -50,6 +50,13 @@ gakki:
     refresh-token-ttl: P7D
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  pagamento:
+    # RN0037 — a operadora de cartão é simulada nesta etapa, como o
+    # próprio DRS autoriza em nota de rodapé. O critério de recusa é o
+    # final do cartão: determinístico, para a demonstração poder exibir
+    # uma compra REPROVADA quando quiser, e acionável pela tela, porque
+    # o cliente cadastra o cartão por lá.
+    digitos-recusados: ${PAGAMENTO_DIGITOS_RECUSADOS:0000}
 
 logging:
   level:

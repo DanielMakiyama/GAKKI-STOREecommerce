@@ -8,13 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/**
- * Finalização da compra — RF0038.
- *
- * <p>O pedido nasce com status {@code EM_PROCESSAMENTO}. O caso não se
- * contenta com a tela de confirmação, que exibe o objeto recém-criado
- * em memória: relê o pedido em "Meus pedidos", que vem do banco.
- */
+// Finalização da compra — RF0038.
 class RF0038FinalizacaoTest extends BaseVendasE2ETest {
 
     @Test

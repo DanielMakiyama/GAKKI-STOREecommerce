@@ -15,14 +15,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-/**
- * Lê o cabeçalho {@code Authorization: Bearer <token>} e popula o
- * SecurityContext da requisição.
- *
- * <p>Estende {@code OncePerRequestFilter} para rodar uma única vez por
- * requisição — um filtro comum executaria de novo a cada forward
- * interno do container.
- */
+// Lê o cabeçalho {@code Authorization: Bearer <token>} e popula o SecurityContext da requisição.
+
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -40,10 +34,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String token = extrairToken(requisicao);
 
-        // Token ausente não é erro aqui: a requisição segue sem
-        // autenticação e quem decide se isso é aceitável são as regras
-        // do SecurityFilterChain. Rotas públicas como /auth/registrar
-        // passam direto.
         if (token != null && SecurityContextHolder.getContext().getAuthentication() == null
                 && jwtService.ehTokenDeAcesso(token)) {
 

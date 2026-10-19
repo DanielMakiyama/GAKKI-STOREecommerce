@@ -15,18 +15,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Cupom de troco — RN0036, nas suas duas metades.
- *
- * <p>A regra manda emitir cupom pela diferença quando os cupons usados
- * superam o valor da compra, <b>e</b> proíbe o uso de cupons
- * desnecessários. Os dois casos usam os valores do exemplo numérico do
- * DRS: cupons de 20, 40 e 35 numa compra de R$ 50,00.
- *
- * <p>O algoritmo do conjunto mínimo não é definido pelo DRS — a regra
- * adotada ({@code soma − menor < valorCompra}) é dedução a partir do
- * exemplo, e está na decisão 4 do contrato.
- */
+// Cupom de troco — RN0036, nas suas duas metades.
+
 class RN0036CupomDeTrocoTest extends BaseVendasE2ETest {
 
     @Test

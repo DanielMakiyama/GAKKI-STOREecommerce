@@ -29,15 +29,8 @@ public class AuthService {
     private final ClienteRepository clienteRepository;
     private final JwtService jwtService;
 
-    /**
-     * Login.
-     *
-     * <p>A autenticação passa pelo AuthenticationManager em vez de
-     * comparar a senha na mão. Com isso, a recusa de cadastro inativado
-     * (RF0023) vem do próprio Spring Security, via
-     * {@code UsuarioAutenticado.isEnabled()} — não depende de alguém
-     * lembrar de checar a flag aqui.
-     */
+    //Login
+
     @Transactional(readOnly = true)
     public LoginResponse autenticar(LoginRequest requisicao) {
         String email = requisicao.email().trim().toLowerCase(Locale.ROOT);
@@ -59,13 +52,8 @@ public class AuthService {
         return montarResposta(usuario);
     }
 
-    /**
-     * Troca o token de renovação por um par novo.
-     *
-     * <p>Confere que o token é mesmo do tipo renovação: aceitar um token
-     * de acesso aqui permitiria estender a sessão indefinidamente a
-     * partir de um token capturado.
-     */
+    //troca o token de renovação por um par novo
+
     @Transactional(readOnly = true)
     public LoginResponse renovar(RenovarTokenRequest requisicao) {
         String token = requisicao.refreshToken();
@@ -89,19 +77,8 @@ public class AuthService {
         return montarResposta(usuario);
     }
 
-    /**
-     * Emite uma sessão nova para um usuário já identificado.
-     *
-     * <p>Sem senha: quem chama já provou a identidade de outra forma. O
-     * caso é a alteração de e-mail (RF0022) — o {@code subject} do JWT é
-     * o e-mail, então o token que o cliente tem na mão morre no instante
-     * em que ele muda, e sem isto a tela levaria um 401 logo depois de
-     * salvar com sucesso.
-     *
-     * <p>Fica no {@code AuthService} porque emitir credencial é assunto
-     * desta camada. O {@code ClienteService} pede a sessão; não monta
-     * token.
-     */
+    // Emite uma sessão nova para um usuário já identificado.
+
     @Transactional(readOnly = true)
     public LoginResponse emitirSessao(String email) {
         return montarResposta((UsuarioAutenticado) usuarioDetailsService.loadUserByUsername(email));
@@ -116,16 +93,8 @@ public class AuthService {
                 usuario.getPapel());
     }
 
-    /**
-     * Nome mostrado no cabeçalho do front.
-     *
-     * <p>Consequência de {@code Usuario} e {@code Cliente} serem
-     * separados: o nome é dado cadastral do cliente (RN0026), e o
-     * administrador não tem um cadastro de cliente. Para ele, sobra a
-     * parte do e-mail antes do arroba. Se um dia os administradores
-     * precisarem de nome próprio, é uma coluna nova em {@code usuario},
-     * numa migration própria.
-     */
+    // Nome mostrado no cabeçalho do front.
+
     private String nomeDeExibicao(UsuarioAutenticado usuario) {
         return clienteRepository.findByUsuarioEmail(usuario.getUsername())
                 .map(Cliente::getNome)

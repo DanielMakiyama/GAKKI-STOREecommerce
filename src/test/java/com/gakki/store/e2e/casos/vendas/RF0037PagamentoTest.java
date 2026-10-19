@@ -12,16 +12,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Formas de pagamento e seus limites — RF0037, RN0033, RN0034, RN0035.
- *
- * <p>O piso de R$ 10,00 por cartão (RN0034) e a exceção que o dispensa
- * quando há cupom no mesmo pagamento (RN0035) são as duas faces da
- * mesma regra, e por isso ficam juntas aqui.
- *
- * <p>A RN0033 entra como recusa: dois cupons promocionais na mesma
- * compra não passam.
- */
+// Formas de pagamento e seus limites RF0037, RN0033, RN0034, RN0035.
+
 class RF0037PagamentoTest extends BaseVendasE2ETest {
 
     @Test

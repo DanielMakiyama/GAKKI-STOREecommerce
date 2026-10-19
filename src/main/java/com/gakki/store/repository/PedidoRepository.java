@@ -1,6 +1,7 @@
 package com.gakki.store.repository;
 
 import com.gakki.store.domain.vendas.Pedido;
+import com.gakki.store.domain.vendas.enums.StatusPedido;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -31,6 +32,30 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
             where p.id = :id and p.cliente.id = :clienteId
             """)
     Optional<Pedido> buscarComItens(@Param("id") Long id, @Param("clienteId") Long clienteId);
+
+    // RF0039, RF0040 — o administrador age sobre qualquer pedido, então
+    // aqui o dono NÃO entra na chave de acesso. A proteção muda de lugar:
+    // passa a ser o @PreAuthorize("hasRole('ADMIN')") no controller.
+    //
+    // Mesma restrição de uma coleção por JOIN FETCH da consulta acima.
+    @Query("""
+            select p from Pedido p
+            left join fetch p.itens
+            where p.id = :id
+            """)
+    Optional<Pedido> buscarComItensParaAdministracao(@Param("id") Long id);
+
+    // RF0039 — a fila do administrador, com e sem filtro de status.
+    //
+    // São duas consultas derivadas em vez de uma JPQL com
+    // "(:status is null or p.status = :status)": passar null num
+    // parâmetro de enum é justamente o caso em que o Hibernate 6 não
+    // consegue inferir o tipo, e o service escolhe a consulta em uma
+    // linha. A ordenação vem no nome do método porque a tela precisa do
+    // mais recente primeiro mesmo quando o Pageable chega sem sort.
+    Page<Pedido> findAllByOrderByCriadoEmDesc(Pageable paginacao);
+
+    Page<Pedido> findByStatusOrderByCriadoEmDesc(StatusPedido status, Pageable paginacao);
 
     // RF0038 — número único do pedido, no formato PED-00001.
     //

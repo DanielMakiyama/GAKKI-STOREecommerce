@@ -12,16 +12,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Carrinho de compra — RF0031, RF0032 e RN0031.
- *
- * <p>Cobre adicionar, alterar quantidade, excluir e visualizar com mais
- * de um item, com a quantidade editada tanto na adição (no stepper da
- * página do produto) quanto na visualização do carrinho.
- *
- * <p>A RN0031 tem duas cláusulas, e cada uma tem o seu caso: item
- * indisponível em estoque e quantidade acima da disponível.
- */
+//Carrinho de compra — RF0031, RF0032 e RN0031.
+
 class RF0031CarrinhoTest extends BaseVendasE2ETest {
 
     @Test

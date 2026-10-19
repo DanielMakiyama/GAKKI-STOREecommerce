@@ -127,17 +127,8 @@ public class CarrinhoService {
         return new FreteResponse(frete, carrinhoMapper.totalDe(carrinho).add(frete));
     }
 
-    /*
-     * Fórmula do frete, em um lugar só.
-     *
-     * Base + adicional por peça além da primeira + adicional para fora de
-     * SP. "Peça" é a soma das quantidades, não o número de linhas: dois
-     * pedais iguais ocupam a mesma caixa que dois pedais diferentes.
-     *
-     * Público porque o PedidoService recalcula o frete na finalização em
-     * vez de aceitar o que o front mandou (decisão 14). Duas fórmulas
-     * acabariam divergindo; esta é a única.
-     */
+    //Fórmula do frete, em um lugar só
+
     public BigDecimal calcularFrete(Carrinho carrinho, Endereco endereco) {
         int pecas = carrinho.getItens().stream()
                 .mapToInt(ItemCarrinho::getQuantidade)

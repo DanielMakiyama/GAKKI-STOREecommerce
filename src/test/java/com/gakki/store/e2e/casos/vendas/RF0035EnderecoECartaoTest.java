@@ -9,20 +9,8 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * A compra, de ponta a ponta — RF0033, RF0034, RF0035 e RF0036.
- *
- * <p>Dois caminhos: com endereço e cartão já cadastrados no perfil, e
- * com os dois cadastrados durante a própria compra, respeitando a
- * composição da RN0023 e as bandeiras da RN0025.
- *
- * <p>"Incorporar ao perfil" (RF0035, RF0036) é verificado pela API, não
- * pela tela: a confirmação do pedido não mostra que o endereço e o
- * cartão entraram no cadastro do cliente.
- *
- * <p>O frete (RF0034) aparece nos dois casos — R$ 15,00 para destino em
- * SP e R$ 25,00 fora, que é a fórmula da decisão 10 do contrato.
- */
+// A compra, de ponta a ponta — RF0033, RF0034, RF0035 e RF0036.
+
 class RF0035EnderecoECartaoTest extends BaseVendasE2ETest {
 
     @Test
