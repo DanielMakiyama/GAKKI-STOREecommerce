@@ -25,6 +25,16 @@ spring:
     enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: false
+    # A massa de demonstração é a V999 de propósito: assim ela roda
+    # sempre depois de toda migration de estrutura, e nenhuma tabela
+    # nova obriga a renumerar o seed.
+    #
+    # A consequência é esta: toda migration de estrutura criada depois
+    # dela nasce "fora de ordem" para o Flyway, porque o número é menor
+    # que o 999 já aplicado. Sem esta linha o boot falha com "Detected
+    # resolved migration not applied to database". É o preço da
+    # convenção, e esta é a linha que a faz funcionar.
+    out-of-order: true
 
   mvc:
     problemdetails:
