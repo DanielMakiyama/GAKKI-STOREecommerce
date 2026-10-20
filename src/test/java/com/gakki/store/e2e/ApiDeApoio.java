@@ -229,6 +229,157 @@ public final class ApiDeApoio {
     }
 
     // ------------------------------------------------------------
+    // Carrinho — itens retirados (RNF0042)
+    // ------------------------------------------------------------
+
+    /**
+     * Descarta tudo que a expiração do prazo retirou do carrinho.
+     *
+     * <p>Precisa rodar no preparo de cada caso: item retirado deixado por
+     * um caso anterior desabilita a compra no seguinte (RNF0042), e o
+     * caso falharia por sujeira, não por defeito. A rota é idempotente,
+     * então chamar com nada retirado não é erro.
+     */
+    public static void descartarItensRetirados(String token) {
+        enviarSemCorpo(autenticada("/carrinho/retirados", token).DELETE().build());
+    }
+
+    public static int itensRetiradosNoCarrinho(String token) {
+        return enviar(autenticada("/carrinho", token).GET().build()).get("itensRetirados").size();
+    }
+
+    public static boolean carrinhoPodeComprar(String token) {
+        return enviar(autenticada("/carrinho", token).GET().build()).get("podeComprar").asBoolean();
+    }
+
+    // ------------------------------------------------------------
+    // Pedido — leitura e transições de administrador
+    //
+    // As transições entram aqui, e não nos casos, porque na maior parte
+    // deles levar o pedido até ENTREGUE é PREPARO: o que está sob teste é
+    // a troca, que só existe depois da entrega (RN0043). O caso que
+    // demonstra o despacho em si faz os mesmos passos pela tela.
+    // ------------------------------------------------------------
+
+    /** Cria a compra pela API, com o carrinho já montado. Devolve o número. */
+    public static String finalizarCompra(String token, long enderecoEntregaId, long cartaoId) {
+        String corpo = """
+                {"enderecoEntregaId":%d,"codigosCupom":[],
+                 "pagamentosCartao":[{"cartaoCreditoId":%d,"valor":%s}]}"""
+                .formatted(enderecoEntregaId, cartaoId, totalComFrete(token, enderecoEntregaId));
+
+        return enviar(autenticada("/pedidos", token)
+                .POST(HttpRequest.BodyPublishers.ofString(corpo))
+                .header("Content-Type", "application/json")
+                .build())
+                .get("numero").asText();
+    }
+
+    private static BigDecimal totalComFrete(String token, long enderecoEntregaId) {
+        return new BigDecimal(enviar(autenticada(
+                "/carrinho/frete?enderecoEntregaId=" + enderecoEntregaId, token).GET().build())
+                .get("valorTotalComFrete").asText());
+    }
+
+    /**
+     * Primeiro cartão do cliente.
+     *
+     * <p>Qual deles não importa para quem só precisa de uma compra criada:
+     * o caso que verifica a composição do pagamento (RN0034) escolhe os
+     * cartões pela tela, um por um.
+     */
+    public static long idDoPrimeiroCartao(String token) {
+        JsonNode cartoes = enviar(autenticada("/clientes/me/cartoes", token).GET().build());
+        if (cartoes.isEmpty()) {
+            throw new IllegalStateException(
+                    "O cliente de demonstração não tem cartão. O seed V999 foi aplicado?");
+        }
+        return cartoes.get(0).get("id").asLong();
+    }
+
+    private static JsonNode pedido(String token, String numero) {
+        JsonNode pagina = enviar(autenticada("/pedidos?size=100&sort=id,desc", token).GET().build());
+        for (JsonNode p : pagina.get("content")) {
+            if (numero.equals(p.get("numero").asText())) {
+                return p;
+            }
+        }
+        throw new IllegalStateException("Nenhum pedido com o número " + numero);
+    }
+
+    public static long idDoPedido(String token, String numero) {
+        return pedido(token, numero).get("id").asLong();
+    }
+
+    public static String statusDoPedido(String token, String numero) {
+        return pedido(token, numero).get("status").asText();
+    }
+
+    /** Ids dos itens do pedido, na ordem em que a API devolve. */
+    public static List<Long> idsDosItens(String token, String numero) {
+        List<Long> ids = new ArrayList<>();
+        for (JsonNode item : pedido(token, numero).get("itens")) {
+            ids.add(item.get("itemPedidoId").asLong());
+        }
+        return ids;
+    }
+
+    public static void confirmarPagamento(String tokenAdmin, long pedidoId) {
+        acaoDePedido(tokenAdmin, pedidoId, "confirmar-pagamento");
+    }
+
+    public static void despachar(String tokenAdmin, long pedidoId) {
+        acaoDePedido(tokenAdmin, pedidoId, "despachar");
+    }
+
+    public static void confirmarEntrega(String tokenAdmin, long pedidoId) {
+        acaoDePedido(tokenAdmin, pedidoId, "confirmar-entrega");
+    }
+
+    private static void acaoDePedido(String tokenAdmin, long pedidoId, String acao) {
+        enviar(autenticada("/pedidos/" + pedidoId + "/" + acao, tokenAdmin)
+                .POST(HttpRequest.BodyPublishers.noBody())
+                .build());
+    }
+
+    // ------------------------------------------------------------
+    // Troca (RF0041 a RF0045) e notificação (RN0046)
+    // ------------------------------------------------------------
+
+    public static String solicitarTroca(String token, long pedidoId, long itemPedidoId, int quantidade) {
+        String corpo = """
+                {"pedidoId":%d,"itens":[{"itemPedidoId":%d,"quantidade":%d}]}"""
+                .formatted(pedidoId, itemPedidoId, quantidade);
+
+        return enviar(autenticada("/trocas", token)
+                .POST(HttpRequest.BodyPublishers.ofString(corpo))
+                .header("Content-Type", "application/json")
+                .build())
+                .get("numero").asText();
+    }
+
+    public static long idDaTroca(String token, String numero) {
+        for (JsonNode troca : enviar(autenticada("/trocas?size=100&sort=id,desc", token).GET().build())
+                .get("content")) {
+            if (numero.equals(troca.get("numero").asText())) {
+                return troca.get("id").asLong();
+            }
+        }
+        throw new IllegalStateException("Nenhuma troca com o número " + numero);
+    }
+
+    public static void autorizarTroca(String tokenAdmin, long trocaId) {
+        enviar(autenticada("/trocas/" + trocaId + "/autorizar", tokenAdmin)
+                .POST(HttpRequest.BodyPublishers.noBody())
+                .build());
+    }
+
+    public static int quantidadeDeNotificacoes(String token) {
+        return enviar(autenticada("/notificacoes?size=100", token).GET().build())
+                .get("content").size();
+    }
+
+    // ------------------------------------------------------------
     // Plumbing
     // ------------------------------------------------------------
 

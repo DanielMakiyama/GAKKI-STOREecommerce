@@ -4,10 +4,13 @@ import com.gakki.store.e2e.paginas.PaginaCarrinho;
 import com.gakki.store.e2e.paginas.PaginaCatalogo;
 import com.gakki.store.e2e.paginas.PaginaCheckout;
 import com.gakki.store.e2e.paginas.PaginaLogin;
+import com.gakki.store.e2e.paginas.PaginaPedidos;
 import com.gakki.store.e2e.paginas.PaginaProduto;
+import com.gakki.store.e2e.paginas.PaginaTrocas;
 import org.junit.jupiter.api.BeforeEach;
 import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
+import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.Select;
 
@@ -75,6 +78,11 @@ public abstract class BaseVendasE2ETest extends BaseE2ETest {
     void esvaziarCarrinho() {
         token = ApiDeApoio.tokenDoClienteDeDemonstracao();
         ApiDeApoio.limparCarrinho(token);
+
+        // Item retirado deixado por um caso anterior desabilita a compra
+        // no seguinte (RNF0042): sem esta linha, um caso falharia por
+        // sujeira do vizinho e não por defeito do sistema.
+        ApiDeApoio.descartarItensRetirados(token);
     }
 
     // ------------------------------------------------------------
@@ -384,6 +392,124 @@ public abstract class BaseVendasE2ETest extends BaseE2ETest {
     /** Códigos que apareceram em {@code depois} e não estavam em {@code antes}. */
     protected static List<String> cuponsNovos(List<String> antes, List<String> depois) {
         return depois.stream().filter(codigo -> !antes.contains(codigo)).toList();
+    }
+
+    // ------------------------------------------------------------
+    // Bloqueio e expiração do carrinho (RN0044, RN0045, RNF0042)
+    // ------------------------------------------------------------
+
+    /**
+     * Faz o prazo do carrinho vencer e volta para a tela.
+     *
+     * <p>O prazo é de 15 minutos na demonstração. Esperar o relógio não
+     * é teste, é sorteio — então o {@code BancoDeApoio} empurra
+     * {@code bloqueado_ate} para o passado, o que produz exatamente o
+     * estado que o tempo produziria. Quem decide que venceu continua
+     * sendo o backend, no próximo acesso ao carrinho: é o caminho de
+     * produção que roda, não um desvio que imita o efeito.
+     */
+    protected void vencerPrazoEVerCarrinho() {
+        assertEquals(1, BancoDeApoio.vencerPrazoDoCarrinho(),
+                "o carrinho do cliente de demonstração deveria existir para ter o prazo vencido");
+
+        irParaCarrinho();
+        esperarPor(PaginaCarrinho.BLOCO_RETIRADOS);
+    }
+
+    protected int quantidadeDeItensRetirados() {
+        return navegador.findElements(PaginaCarrinho.ITENS_RETIRADOS).size();
+    }
+
+    protected void restaurarPrimeiroItemRetirado() {
+        int antes = quantidadeDeItensRetirados();
+        clicar(PaginaCarrinho.BOTOES_RESTAURAR);
+        esperarQuantidade(PaginaCarrinho.ITENS_RETIRADOS, antes - 1);
+    }
+
+    protected void descartarPrimeiroItemRetirado() {
+        int antes = quantidadeDeItensRetirados();
+        clicar(PaginaCarrinho.BOTOES_DESCARTAR);
+        esperarQuantidade(PaginaCarrinho.ITENS_RETIRADOS, antes - 1);
+    }
+
+    protected boolean compraEstaHabilitada() {
+        return esperarPor(PaginaCarrinho.BOTAO_FINALIZAR).isEnabled();
+    }
+
+    // ------------------------------------------------------------
+    // Ciclo do pedido (RF0039, RF0040) e troca (RF0041 a RF0045)
+    // ------------------------------------------------------------
+
+    /**
+     * Espera um atributo {@code data-*} assumir um valor.
+     *
+     * <p>Com o try/catch de {@code StaleElementReferenceException} por
+     * necessidade: a tela recarrega a lista depois de cada ação, e o
+     * elemento pode ser substituído entre o {@code findElement} e a
+     * leitura. O {@code WebDriverWait} ignora apenas
+     * {@code NotFoundException} por padrão, então sem isto a condição
+     * estouraria no lugar de tentar de novo.
+     */
+    protected void esperarAtributo(By seletor, String atributo, String valor) {
+        espera.until(nav -> {
+            try {
+                return valor.equals(nav.findElement(seletor).getDomAttribute(atributo));
+            } catch (StaleElementReferenceException elementoTrocado) {
+                return false;
+            }
+        });
+    }
+
+    protected void entrarComoAdministradorEm(By aba) {
+        abrir(PaginaLogin.CAMINHO);
+        clicar(PaginaLogin.CARTAO_ADMIN);
+        esperarUrlConter("/admin");
+        clicar(aba);
+    }
+
+    protected void irParaPedidos() {
+        abrir(PaginaPedidos.CAMINHO);
+    }
+
+    protected void irParaTrocas() {
+        abrir(PaginaTrocas.CAMINHO);
+    }
+
+    /**
+     * Compra criada pela API, com um item só.
+     *
+     * <p>Atalho de PREPARO, não de fluxo: os casos que precisam de um
+     * pedido entregue para chegar à troca (RN0043) não estão testando a
+     * finalização — ela tem os seus próprios casos, e lá cada passo é
+     * dado pela tela.
+     */
+    protected String compraPelaApi(String codigoDoInstrumento, int quantidade) {
+        ApiDeApoio.limparCarrinho(token);
+        ApiDeApoio.adicionarAoCarrinho(token, ApiDeApoio.idDoInstrumento(codigoDoInstrumento), quantidade);
+
+        return ApiDeApoio.finalizarCompra(token,
+                ApiDeApoio.idDoEnderecoPrincipal(token),
+                ApiDeApoio.idDoPrimeiroCartao(token));
+    }
+
+    /** Leva o pedido de EM_PROCESSAMENTO até ENTREGUE pela API. */
+    protected void entregarPelaApi(String numeroDoPedido) {
+        String tokenAdmin = ApiDeApoio.tokenDoAdministrador();
+        long pedidoId = ApiDeApoio.idDoPedido(token, numeroDoPedido);
+
+        ApiDeApoio.confirmarPagamento(tokenAdmin, pedidoId);
+        ApiDeApoio.despachar(tokenAdmin, pedidoId);
+        ApiDeApoio.confirmarEntrega(tokenAdmin, pedidoId);
+
+        assertTexto("ENTREGUE", ApiDeApoio.statusDoPedido(token, numeroDoPedido),
+                "status do pedido " + numeroDoPedido + " depois do preparo");
+    }
+
+    /** Pedido entregue com um item, pronto para a troca (RN0043). */
+    protected String pedidoEntregue(String codigoDoInstrumento, int quantidade) {
+        String numero = compraPelaApi(codigoDoInstrumento, quantidade);
+        entregarPelaApi(numero);
+        return numero;
     }
 
     // ------------------------------------------------------------

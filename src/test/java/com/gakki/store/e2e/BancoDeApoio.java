@@ -169,6 +169,146 @@ public final class BancoDeApoio {
         }
     }
 
+    // ------------------------------------------------------------
+    // Bloqueio do carrinho (RN0044, RN0045, RNF0042)
+    //
+    // O prazo é parametrizado por `gakki.carrinho.prazo-bloqueio` e vale
+    // 15 minutos na demonstração. Esperar o relógio passar não é teste:
+    // é sorteio. Empurrar `bloqueado_ate` para o passado produz o mesmo
+    // estado que o tempo produziria, em milissegundos, e a expiração em
+    // si continua sendo decidida pelo backend no próximo acesso — é o
+    // caminho de produção que roda, não um atalho que simula o efeito.
+    // ------------------------------------------------------------
+
+    /** Põe o prazo do carrinho no passado. Devolve quantas linhas mudaram. */
+    public static int vencerPrazoDoCarrinho() {
+        String sql = """
+                UPDATE carrinho
+                   SET bloqueado_ate = now() - interval '1 second'
+                 WHERE cliente_id = (SELECT id FROM cliente WHERE codigo = ?)""";
+
+        try (Connection conexao = conectar();
+             PreparedStatement comando = conexao.prepareStatement(sql)) {
+
+            comando.setString(1, CLIENTE_DEMO);
+            return comando.executeUpdate();
+
+        } catch (Exception e) {
+            throw new IllegalStateException("Falha ao vencer o prazo do carrinho em " + URL, e);
+        }
+    }
+
+    /** Fim do prazo gravado, ou {@code null} se não há contagem em curso. */
+    public static OffsetDateTime prazoDoCarrinho() {
+        String sql = """
+                SELECT c.bloqueado_ate
+                  FROM carrinho c
+                  JOIN cliente cl ON cl.id = c.cliente_id
+                 WHERE cl.codigo = ?""";
+
+        try (Connection conexao = conectar();
+             PreparedStatement comando = conexao.prepareStatement(sql)) {
+
+            comando.setString(1, CLIENTE_DEMO);
+            try (ResultSet r = comando.executeQuery()) {
+                return r.next() ? r.getObject(1, OffsetDateTime.class) : null;
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException("Falha ao consultar o prazo do carrinho em " + URL, e);
+        }
+    }
+
+    /** Quantas linhas de `item_retirado` o carrinho do cliente tem (RNF0042). */
+    public static int itensRetirados() {
+        String sql = """
+                SELECT count(*)
+                  FROM item_retirado r
+                  JOIN carrinho c ON c.id = r.carrinho_id
+                  JOIN cliente cl ON cl.id = c.cliente_id
+                 WHERE cl.codigo = ?""";
+
+        try (Connection conexao = conectar();
+             PreparedStatement comando = conexao.prepareStatement(sql)) {
+
+            comando.setString(1, CLIENTE_DEMO);
+            try (ResultSet r = comando.executeQuery()) {
+                r.next();
+                return r.getInt(1);
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException("Falha ao contar itens retirados em " + URL, e);
+        }
+    }
+
+    /**
+     * Devolve unidades ao estoque do instrumento.
+     *
+     * <p>Existe para a suíte poder rodar mais de uma vez: desde que a
+     * RN0028 entrou, a aprovação do pagamento debita estoque de verdade,
+     * e um caso que compra 2 pedais a cada execução esgotaria os 8 do
+     * seed na quinta rodada.
+     *
+     * <p>Não passa pela entrada de estoque da API de propósito: aquela
+     * recalcula o valor de venda pelo maior custo (RN0051) e mexeria nos
+     * preços que as outras asserções conferem. Isto aqui é desfazer o
+     * efeito do caso, não exercitar um fluxo.
+     */
+    public static void reporEstoque(String codigo, int quantidade) {
+        String sql = """
+                UPDATE instrumento
+                   SET quantidade_estoque = quantidade_estoque + ?
+                 WHERE codigo = ?""";
+
+        try (Connection conexao = conectar();
+             PreparedStatement comando = conexao.prepareStatement(sql)) {
+
+            comando.setInt(1, quantidade);
+            comando.setString(2, codigo);
+            if (comando.executeUpdate() != 1) {
+                throw new IllegalStateException("Nenhum instrumento com o código " + codigo);
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException("Falha ao repor o estoque de " + codigo + " em " + URL, e);
+        }
+    }
+
+    // ------------------------------------------------------------
+    // Troca (RF0041 a RF0045)
+    // ------------------------------------------------------------
+
+    /**
+     * Status gravado da troca, lido direto do banco.
+     *
+     * <p>Serve para provar que a transição sobreviveu ao commit, e não só
+     * que a tela mostrou o rótulo novo.
+     */
+    public static String statusDaTroca(String numero) {
+        return umCampoDaTroca(numero, "status", String.class);
+    }
+
+    /** Decisão sobre o estoque na confirmação de recebimento (RF0044). */
+    public static Boolean trocaRetornouAoEstoque(String numero) {
+        return umCampoDaTroca(numero, "retorna_estoque", Boolean.class);
+    }
+
+    private static <T> T umCampoDaTroca(String numero, String coluna, Class<T> tipo) {
+        // Coluna escolhida por este arquivo, nunca por entrada externa.
+        String sql = "SELECT " + coluna + " FROM troca WHERE numero = ?";
+        try (Connection conexao = conectar();
+             PreparedStatement comando = conexao.prepareStatement(sql)) {
+
+            comando.setString(1, numero);
+            try (ResultSet r = comando.executeQuery()) {
+                if (!r.next()) {
+                    throw new IllegalStateException("Nenhuma troca com o número " + numero);
+                }
+                return r.getObject(1, tipo);
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException("Falha ao consultar a troca " + numero + " em " + URL, e);
+        }
+    }
+
     private static Connection conectar() throws Exception {
         return DriverManager.getConnection(URL, USUARIO, SENHA);
     }

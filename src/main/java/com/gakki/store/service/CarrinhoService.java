@@ -214,12 +214,19 @@ public class CarrinhoService {
     // sem propósito.
     @Transactional
     public CarrinhoResponse descartarTodos(String email) {
-        Carrinho carrinho = carrinhoComItens(clienteDoEmail(email).getId());
+        Cliente cliente = clienteDoEmail(email);
 
-        itemRetiradoRepository.deleteByCarrinhoId(carrinho.getId());
-        itemRetiradoRepository.flush();
-
-        return responder(carrinho);
+        // Carrinho inexistente não é erro aqui: sem carrinho não há o que
+        // descartar, e a operação é idempotente de propósito. É o que
+        // permite usá-la como limpeza — inclusive no preparo das suítes —
+        // sem o chamador precisar saber se sobrou algo.
+        return carrinhoRepository.buscarComItens(cliente.getId())
+                .map(carrinho -> {
+                    itemRetiradoRepository.deleteByCarrinhoId(carrinho.getId());
+                    itemRetiradoRepository.flush();
+                    return responder(carrinho);
+                })
+                .orElseGet(CarrinhoResponse::vazio);
     }
 
     // RF0034 — prévia do frete para o endereço escolhido no checkout.

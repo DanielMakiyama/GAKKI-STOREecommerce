@@ -15,6 +15,15 @@ public final class PaginaCheckout {
 
     public static final By ERRO = By.cssSelector("[data-testid='erro-checkout']");
 
+    /**
+     * Checkout recusado por item retirado do carrinho (RNF0042).
+     *
+     * <p>Terceira guarda do mesmo requisito: o botão do carrinho já vem
+     * desabilitado e o {@code POST /pedidos} recusa — esta cobre quem
+     * chegou por URL ou tinha a tela aberta quando o prazo venceu.
+     */
+    public static final By BLOQUEADO = By.cssSelector("[data-testid='checkout-bloqueado']");
+
     // ---------- Endereço de entrega ----------
 
     public static final By OPCOES_DE_ENDERECO = By.cssSelector("[data-testid='opcao-endereco']");
