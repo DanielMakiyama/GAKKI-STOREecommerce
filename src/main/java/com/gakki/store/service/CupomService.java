@@ -171,13 +171,30 @@ public class CupomService {
             return Optional.empty();
         }
 
-        Cupom troco = new Cupom();
-        troco.setCliente(cliente);
-        troco.setTipo(TipoCupom.TROCA);
-        troco.setValor(sobra.setScale(2, RoundingMode.HALF_UP));
-        troco.setCodigo(proximoCodigoDeTroca());
+        return Optional.of(emitirCupomDeTroca(cliente, sobra));
+    }
 
-        return Optional.of(cupomRepository.save(troco));
+    /*
+     * RF0045 — cupom de troca emitido quando o administrador confirma o
+     * recebimento dos itens devolvidos.
+     *
+     * É o mesmo objeto do troco da RN0036 — cupom do tipo TROCA,
+     * disponível para compras futuras — e por isso reaproveita a mesma
+     * numeração. Os dois caminhos que a Especificação de Caso de Uso
+     * descreve para gerar um cupom de troca terminam aqui.
+     *
+     * Sem @Transactional próprio: participa da transação de quem emite.
+     * Um cupom que sobrevivesse ao rollback da troca seria dinheiro
+     * criado do nada.
+     */
+    public Cupom emitirCupomDeTroca(Cliente cliente, BigDecimal valor) {
+        Cupom cupom = new Cupom();
+        cupom.setCliente(cliente);
+        cupom.setTipo(TipoCupom.TROCA);
+        cupom.setValor(valor.setScale(2, RoundingMode.HALF_UP));
+        cupom.setCodigo(proximoCodigoDeTroca());
+
+        return cupomRepository.save(cupom);
     }
 
     /*

@@ -1,23 +1,29 @@
 package com.gakki.store.dto.response;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.List;
 
-// Carrinho do cliente (RF0031, RF0032).
-//
-// `valorTotal` é só a soma dos itens, sem frete: a tela do carrinho
-// mostra "Frete: calculado na próxima etapa", porque o frete depende do
-// endereço, que só é escolhido no checkout (RF0034).
-
+/*
+ * O carrinho como a tela precisa dele.
+ *
+ * Além dos itens, carrega o estado do bloqueio (RN0044) e os itens que
+ * saíram por expiração (RNF0042). `podeComprar` é calculado no servidor
+ * de propósito: a RNF0042 manda desabilitar a compra enquanto houver
+ * item retirado, e essa é uma regra de negócio — deixá-la só no
+ * JavaScript da tela a tornaria contornável.
+ */
 public record CarrinhoResponse(
         Long carrinhoId,
         List<ItemCarrinhoResponse> itens,
-        BigDecimal valorTotal) {
+        BigDecimal valorTotal,
+        OffsetDateTime bloqueadoAte,
+        Long prazoBloqueioSegundos,
+        List<ItemRetiradoResponse> itensRetirados,
+        boolean podeComprar) {
 
-    // Cliente que nunca adicionou nada não tem linha de carrinho no banco
-    // — o carrinho é criado sob demanda. A tela, porém, precisa de uma
-    // resposta 200 com lista vazia, e não de um 404.
     public static CarrinhoResponse vazio() {
-        return new CarrinhoResponse(null, List.of(), BigDecimal.ZERO);
+        return new CarrinhoResponse(null, List.of(), BigDecimal.ZERO,
+                null, null, List.of(), false);
     }
 }

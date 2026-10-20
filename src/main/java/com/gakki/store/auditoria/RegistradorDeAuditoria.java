@@ -14,14 +14,14 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import java.util.Map;
 
 // Grava a linha de log_transacao (RNF0012).
-//
+
 // AFTER_COMMIT: só registra o que de fato foi gravado. Se a transação do
 // pedido sofrer rollback, nenhum evento é entregue e o log não fica com
 // registro de uma compra que não existiu.
-//
+
 // REQUIRES_NEW porque, depois do commit, não há mais transação aberta —
 // sem isso o save não teria onde rodar.
-//
+
 // LogTransacao não tem @EntityListeners: se tivesse, gravar o log geraria
 // outro evento, que geraria outro log, sem fim.
 

@@ -14,17 +14,17 @@ import java.util.Map;
 
 // Ouve as escritas das entidades anotadas com @EntityListeners e publica
 // um evento por operação (RNF0012).
-//
+
 // NÃO grava no banco aqui, de propósito. Estes callbacks rodam dentro do
 // flush do Hibernate, e persistir uma entidade nova durante o flush mexe
 // no contexto de persistência enquanto ele está sendo percorrido — falha
 // de forma intermitente. Quem grava é o RegistradorDeAuditoria, depois do
 // commit (contrato de Vendas v3, decisão 8).
-//
+
 // @PostPersist, e não @PrePersist: com GenerationType.IDENTITY o id só
 // existe depois do INSERT. No @PrePersist, getId() ainda devolve null — e
 // o log sairia sem saber a qual registro se refere.
-//
+
 // É um bean do Spring: o Spring Boot registra o SpringBeanContainer no
 // Hibernate, então o listener recebe injeção normalmente.
 

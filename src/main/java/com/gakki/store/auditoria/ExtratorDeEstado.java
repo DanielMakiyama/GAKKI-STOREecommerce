@@ -14,7 +14,7 @@ import java.util.Map;
 
 // Lê o estado de uma entidade como um mapa campo → valor, para virar o
 // JSON do log (RNF0012).
-//
+
 // Por que não serializar a entidade direto com Jackson: relação
 // bidirecional (Pedido tem itens, item tem pedido) entra em recursão
 // infinita, e tocar um campo LAZY dispara consulta no meio do flush. Aqui

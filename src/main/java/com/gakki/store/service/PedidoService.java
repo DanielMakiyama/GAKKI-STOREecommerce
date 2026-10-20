@@ -6,7 +6,6 @@ import com.gakki.store.domain.cliente.Endereco;
 import com.gakki.store.domain.vendas.Carrinho;
 import com.gakki.store.domain.vendas.Cupom;
 import com.gakki.store.domain.vendas.Instrumento;
-import com.gakki.store.domain.vendas.ItemCarrinho;
 import com.gakki.store.domain.vendas.ItemPedido;
 import com.gakki.store.domain.vendas.Pedido;
 import com.gakki.store.domain.vendas.enums.StatusPedido;
@@ -91,9 +90,20 @@ public class PedidoService {
             throw new RegraDeNegocioException("Não é possível finalizar uma compra com o carrinho vazio.");
         }
 
+        // RNF0042 — enquanto houver item retirado por expiração, a compra
+        // fica desabilitada. A trava é aqui, e não só no botão da tela:
+        // regra que vive em JavaScript é regra contornável.
+        if (!carrinhoService.itensRetirados(carrinho.getId()).isEmpty()) {
+            throw new RegraDeNegocioException(
+                    "Há itens retirados do carrinho por expiração do prazo. "
+                            + "Devolva-os ao carrinho ou descarte-os antes de comprar.");
+        }
+
         // RN0031 conferida de novo agora, e não só na adição: entre pôr
         // no carrinho e fechar a compra pode ter passado tempo.
-        carrinho.getItens().forEach(this::validarDisponibilidade);
+        carrinho.getItens().forEach(item ->
+                carrinhoService.validarDisponibilidade(
+                        item.getInstrumento(), item.getQuantidade(), cliente.getId()));
 
         // Valores calculados aqui, nunca lidos da requisição (decisão 14).
         BigDecimal valorItens = carrinhoMapper.totalDe(carrinho);
@@ -122,6 +132,12 @@ public class PedidoService {
 
         // orphanRemoval apaga as linhas: o carrinho fica vazio, não some.
         carrinho.getItens().clear();
+
+        // RN0044 — daqui para a frente o bloqueio é do pedido, não do
+        // carrinho: a mercadoria segue comprometida enquanto o pedido
+        // estiver EM_PROCESSAMENTO. Zerar o prazo evita que a tela mostre
+        // uma contagem correndo sobre um carrinho que já não tem itens.
+        carrinho.setBloqueadoAte(null);
 
         return pedidoMapper.paraResponse(gravado, troco);
     }
@@ -381,15 +397,6 @@ public class PedidoService {
     private Cartao cartaoDoCliente(Long cartaoId, Cliente cliente) {
         return cartaoRepository.findByIdAndClienteId(cartaoId, cliente.getId())
                 .orElseThrow(() -> RecursoNaoEncontradoException.cartao(cartaoId));
-    }
-
-    private void validarDisponibilidade(ItemCarrinho item) {
-        if (item.getInstrumento().getQuantidadeEstoque() < item.getQuantidade()) {
-            throw new RegraDeNegocioException(
-                    "Estoque insuficiente para %s: disponível %d."
-                            .formatted(item.getInstrumento().getNome(),
-                                    item.getInstrumento().getQuantidadeEstoque()));
-        }
     }
 
     private String proximoNumero() {

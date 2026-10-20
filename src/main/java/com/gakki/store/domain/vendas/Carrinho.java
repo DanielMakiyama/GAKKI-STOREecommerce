@@ -44,8 +44,11 @@ public class Carrinho {
     @JoinColumn(name = "cliente_id", nullable = false, unique = true)
     private Cliente cliente;
 
-    // Mapeada e sem uso nesta fase: o bloqueio temporário de itens (RN0044,
-    // RN0045) está fora do escopo do enunciado. Nenhum código escreve aqui.
+    // Fim do prazo de bloqueio dos itens (RN0044, RN0045). É UM prazo por
+    // carrinho, reiniciado a cada item incluído — a observação da própria
+    // RN0044 manda contá-lo "relativo ao último item incluído". Nulo
+    // significa carrinho sem contagem em curso; vencido, o CarrinhoService
+    // move os itens para item_retirado (RNF0042).
     @Column(name = "bloqueado_ate")
     private OffsetDateTime bloqueadoAte;
 

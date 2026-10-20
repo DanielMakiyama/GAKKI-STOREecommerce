@@ -86,4 +86,43 @@ public class CarrinhoController {
         return ResponseEntity.ok(carrinhoService.calcularFrete(
                 usuario.getUsername(), enderecoEntregaId));
     }
+
+    /*
+     * RNF0042 — devolve ao carrinho um item retirado por expiração.
+     *
+     * POST porque recria um recurso que havia saído, e reinicia o prazo
+     * de bloqueio. O id é o do item retirado, não o do item de carrinho:
+     * aquele já não existe.
+     */
+    @PostMapping("/retirados/{id}/restaurar")
+    public ResponseEntity<CarrinhoResponse> restaurar(
+            @AuthenticationPrincipal UsuarioAutenticado usuario,
+            @PathVariable Long id) {
+
+        return ResponseEntity.ok(carrinhoService.restaurar(usuario.getUsername(), id));
+    }
+
+    /*
+     * O outro caminho da RNF0042 — desistir do item retirado.
+     *
+     * Devolve o carrinho em vez de 204 porque o que a tela precisa saber
+     * é se a compra já está liberada, e isso vem no `podeComprar` da
+     * resposta: sem corpo, ela teria de fazer um GET logo depois.
+     */
+    @DeleteMapping("/retirados/{id}")
+    public ResponseEntity<CarrinhoResponse> descartar(
+            @AuthenticationPrincipal UsuarioAutenticado usuario,
+            @PathVariable Long id) {
+
+        return ResponseEntity.ok(carrinhoService.descartar(usuario.getUsername(), id));
+    }
+
+    // Ao expirar, o carrinho inteiro é retirado de uma vez; dispensar item
+    // por item seria atrito sem propósito.
+    @DeleteMapping("/retirados")
+    public ResponseEntity<CarrinhoResponse> descartarTodos(
+            @AuthenticationPrincipal UsuarioAutenticado usuario) {
+
+        return ResponseEntity.ok(carrinhoService.descartarTodos(usuario.getUsername()));
+    }
 }

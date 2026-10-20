@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.OffsetDateTime;
 import java.util.Optional;
 
 public interface CarrinhoRepository extends JpaRepository<Carrinho, Long> {
@@ -29,4 +30,27 @@ public interface CarrinhoRepository extends JpaRepository<Carrinho, Long> {
             where c.cliente.id = :clienteId
             """)
     Optional<Carrinho> buscarComItens(@Param("clienteId") Long clienteId);
+
+    /*
+     * RN0044 — quanto deste instrumento está bloqueado nos carrinhos de
+     * OUTROS clientes.
+     *
+     * Bloqueio aqui não é coluna: é consequência de haver item num
+     * carrinho cujo prazo ainda não venceu. Guardar um contador separado
+     * em `instrumento` criaria um segundo lugar para a verdade, e os dois
+     * divergiriam no primeiro erro de fluxo.
+     *
+     * O próprio cliente fica de fora porque a RN0031 compara o total que
+     * ficará no carrinho DELE — contá-lo aqui seria somar duas vezes.
+     */
+    @Query("""
+            select coalesce(sum(i.quantidade), 0)
+            from ItemCarrinho i
+            where i.instrumento.id = :instrumentoId
+              and i.carrinho.cliente.id <> :clienteId
+              and i.carrinho.bloqueadoAte > :agora
+            """)
+    Long quantidadeBloqueadaPorOutros(@Param("instrumentoId") Long instrumentoId,
+                                      @Param("clienteId") Long clienteId,
+                                      @Param("agora") OffsetDateTime agora);
 }

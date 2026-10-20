@@ -5,6 +5,8 @@ import com.gakki.store.domain.cliente.Endereco;
 import com.gakki.store.domain.vendas.Carrinho;
 import com.gakki.store.domain.vendas.Instrumento;
 import com.gakki.store.domain.vendas.ItemCarrinho;
+import com.gakki.store.domain.vendas.ItemRetirado;
+import com.gakki.store.domain.vendas.enums.StatusPedido;
 import com.gakki.store.dto.request.ItemCarrinhoRequest;
 import com.gakki.store.dto.response.CarrinhoResponse;
 import com.gakki.store.dto.response.FreteResponse;
@@ -15,18 +17,35 @@ import com.gakki.store.repository.CarrinhoRepository;
 import com.gakki.store.repository.ClienteRepository;
 import com.gakki.store.repository.EnderecoRepository;
 import com.gakki.store.repository.InstrumentoRepository;
+import com.gakki.store.repository.ItemRetiradoRepository;
+import com.gakki.store.repository.PedidoRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
-// RF0031, RF0032, RN0031 e RF0034 — carrinho e prévia de frete.
-//
-// Nada aqui decrementa estoque: a RN0031 nesta fase é comparação, não
-// reserva (contrato de Vendas v3, decisão 1).
-
+/*
+ * Carrinho, frete e bloqueio temporário
+ * (RF0031, RF0032, RF0034, RN0031, RN0044, RN0045, RNF0042).
+ *
+ * O bloqueio é consequência, não coluna: um item está bloqueado porque
+ * existe num carrinho cujo prazo ainda não venceu, ou num pedido ainda
+ * EM_PROCESSAMENTO. Manter um contador de "reservado" no instrumento
+ * criaria um segundo lugar para a verdade, e os dois divergiriam no
+ * primeiro erro de fluxo.
+ *
+ * O prazo é um só por carrinho e reinicia a cada item incluído, como a
+ * observação da RN0044 determina. Ao vencer, os itens saem do carrinho e
+ * passam para `item_retirado`, de onde a tela os apresenta (RNF0042) e
+ * de onde o cliente pode devolvê-los ao carrinho.
+ */
 @Service
 @RequiredArgsConstructor
 public class CarrinhoService {
@@ -44,14 +63,29 @@ public class CarrinhoService {
     private final InstrumentoRepository instrumentoRepository;
     private final EnderecoRepository enderecoRepository;
     private final ClienteRepository clienteRepository;
+    private final PedidoRepository pedidoRepository;
+    private final ItemRetiradoRepository itemRetiradoRepository;
     private final CarrinhoMapper carrinhoMapper;
+
+    // RN0044 — prazo parametrizado. ISO-8601, então PT15M na demonstração
+    // e PT10S quando se quer ver a expiração acontecer.
+    @Value("${gakki.carrinho.prazo-bloqueio:PT15M}")
+    private Duration prazoBloqueio;
 
     // RF0033 — "iniciar a compra" é navegação de tela; o backend não
     // distingue ver o carrinho de abrir o checkout.
-    @Transactional(readOnly = true)
+    //
+    // Não é readOnly: ver o carrinho é o momento em que a expiração é
+    // percebida, e perceber significa gravar (RN0045).
+    @Transactional
     public CarrinhoResponse verCarrinho(String email) {
-        return carrinhoRepository.buscarComItens(clienteDoEmail(email).getId())
-                .map(carrinhoMapper::paraResponse)
+        Cliente cliente = clienteDoEmail(email);
+
+        return carrinhoRepository.buscarComItens(cliente.getId())
+                .map(carrinho -> {
+                    aplicarExpiracao(carrinho);
+                    return responder(carrinho);
+                })
                 .orElseGet(CarrinhoResponse::vazio);
     }
 
@@ -61,6 +95,7 @@ public class CarrinhoService {
         Cliente cliente = clienteDoEmail(email);
         Instrumento instrumento = instrumentoAtivo(requisicao.instrumentoId());
         Carrinho carrinho = carrinhoDoCliente(cliente);
+        aplicarExpiracao(carrinho);
 
         // O índice ux_item_carrinho_instrumento não admite duas linhas do
         // mesmo instrumento: adicionar de novo soma na linha existente.
@@ -71,7 +106,7 @@ public class CarrinhoService {
         // A validação é sobre o total que ficará no carrinho, não sobre o
         // que está sendo somado agora: três adições de 2 unidades em um
         // estoque de 5 têm de falhar na terceira.
-        validarDisponibilidade(instrumento, quantidadeFinal);
+        validarDisponibilidade(instrumento, quantidadeFinal, cliente.getId());
 
         if (existente == null) {
             carrinho.adicionarItem(carrinhoMapper.novoItem(instrumento, requisicao.quantidade()));
@@ -79,22 +114,28 @@ public class CarrinhoService {
             existente.setQuantidade(quantidadeFinal);
         }
 
+        // RN0044 — o prazo é relativo ao último item incluído.
+        renovarBloqueio(carrinho);
+
         // saveAndFlush para o item novo receber o id antes de virar DTO —
         // sem isso o `itemId` da resposta sairia nulo e a tela não teria
         // como chamar alterar nem remover.
-        return carrinhoMapper.paraResponse(carrinhoRepository.saveAndFlush(carrinho));
+        return responder(carrinhoRepository.saveAndFlush(carrinho));
     }
 
     // RF0032 — alterar a quantidade na visualização do carrinho.
     @Transactional
     public CarrinhoResponse atualizarQuantidade(String email, Long itemId, Integer quantidade) {
-        Carrinho carrinho = carrinhoComItens(clienteDoEmail(email).getId());
-        ItemCarrinho item = itemDoCarrinho(carrinho, itemId);
+        Cliente cliente = clienteDoEmail(email);
+        Carrinho carrinho = carrinhoComItens(cliente.getId());
+        aplicarExpiracao(carrinho);
 
-        validarDisponibilidade(item.getInstrumento(), quantidade);
+        ItemCarrinho item = itemDoCarrinho(carrinho, itemId);
+        validarDisponibilidade(item.getInstrumento(), quantidade, cliente.getId());
         item.setQuantidade(quantidade);
 
-        return carrinhoMapper.paraResponse(carrinho);
+        renovarBloqueio(carrinho);
+        return responder(carrinho);
     }
 
     // RF0032 — excluir item do carrinho.
@@ -107,6 +148,78 @@ public class CarrinhoService {
         // delete direto pelo repository deixaria a coleção em memória
         // dessincronizada do banco dentro da mesma transação.
         carrinho.removerItem(item);
+    }
+
+    /*
+     * RNF0042 — "os itens deverão ser adicionados novamente no carrinho".
+     *
+     * A devolução é um ato do cliente, não automática: devolver sozinho
+     * faria o item nunca sair de fato, e a regra manda justamente
+     * desbloqueá-lo para outros clientes enquanto isso. Por isso o item
+     * volta a passar pela validação de disponibilidade — no intervalo,
+     * outra pessoa pode ter levado a última unidade.
+     */
+    @Transactional
+    public CarrinhoResponse restaurar(String email, Long itemRetiradoId) {
+        Cliente cliente = clienteDoEmail(email);
+        Carrinho carrinho = carrinhoComItens(cliente.getId());
+
+        ItemRetirado retirado = itemRetiradoRepository
+                .findByIdAndCarrinhoId(itemRetiradoId, carrinho.getId())
+                .orElseThrow(() -> RecursoNaoEncontradoException.itemDeCarrinho(itemRetiradoId));
+
+        Instrumento instrumento = retirado.getInstrumento();
+        ItemCarrinho existente = itemDoInstrumento(carrinho, instrumento.getId());
+        int quantidadeFinal = retirado.getQuantidade()
+                + (existente == null ? 0 : existente.getQuantidade());
+
+        validarDisponibilidade(instrumento, quantidadeFinal, cliente.getId());
+
+        if (existente == null) {
+            carrinho.adicionarItem(carrinhoMapper.novoItem(instrumento, retirado.getQuantidade()));
+        } else {
+            existente.setQuantidade(quantidadeFinal);
+        }
+
+        itemRetiradoRepository.delete(retirado);
+        renovarBloqueio(carrinho);
+
+        return responder(carrinhoRepository.saveAndFlush(carrinho));
+    }
+
+    /*
+     * O outro caminho da RNF0042: desistir do item retirado.
+     *
+     * Sem isto o cliente ficaria preso. A finalização recusa enquanto
+     * houver item retirado, e devolver ao carrinho pode ser impossível —
+     * basta outra pessoa ter levado a última unidade no intervalo. Com só
+     * o restaurar, esse carrinho nunca mais compraria nada.
+     */
+    @Transactional
+    public CarrinhoResponse descartar(String email, Long itemRetiradoId) {
+        Carrinho carrinho = carrinhoComItens(clienteDoEmail(email).getId());
+
+        ItemRetirado retirado = itemRetiradoRepository
+                .findByIdAndCarrinhoId(itemRetiradoId, carrinho.getId())
+                .orElseThrow(() -> RecursoNaoEncontradoException.itemDeCarrinho(itemRetiradoId));
+
+        itemRetiradoRepository.delete(retirado);
+        itemRetiradoRepository.flush();
+
+        return responder(carrinho);
+    }
+
+    // Descarta a lista inteira de uma vez: ao expirar, o carrinho todo é
+    // retirado, e fazer o cliente dispensar item por item seria atrito
+    // sem propósito.
+    @Transactional
+    public CarrinhoResponse descartarTodos(String email) {
+        Carrinho carrinho = carrinhoComItens(clienteDoEmail(email).getId());
+
+        itemRetiradoRepository.deleteByCarrinhoId(carrinho.getId());
+        itemRetiradoRepository.flush();
+
+        return responder(carrinho);
     }
 
     // RF0034 — prévia do frete para o endereço escolhido no checkout.
@@ -127,8 +240,7 @@ public class CarrinhoService {
         return new FreteResponse(frete, carrinhoMapper.totalDe(carrinho).add(frete));
     }
 
-    //Fórmula do frete, em um lugar só
-
+    // Fórmula do frete, em um lugar só.
     public BigDecimal calcularFrete(Carrinho carrinho, Endereco endereco) {
         int pecas = carrinho.getItens().stream()
                 .mapToInt(ItemCarrinho::getQuantidade)
@@ -152,13 +264,87 @@ public class CarrinhoService {
                 .orElseThrow(() -> new RegraDeNegocioException("O carrinho está vazio."));
     }
 
-    // RN0031 — não é permitido pedir mais do que existe em estoque.
-    private void validarDisponibilidade(Instrumento instrumento, int quantidade) {
-        if (instrumento.getQuantidadeEstoque() < quantidade) {
+    // RNF0042 — a finalização consulta isto para recusar enquanto houver
+    // item retirado esperando decisão do cliente.
+    @Transactional(readOnly = true)
+    public List<ItemRetirado> itensRetirados(Long carrinhoId) {
+        return carrinhoId == null ? List.of() : itemRetiradoRepository.doCarrinho(carrinhoId);
+    }
+
+    /*
+     * RN0031 e RN0044 — o disponível não é o estoque: é o estoque menos
+     * o que está bloqueado.
+     *
+     * Bloqueado é o que está em carrinho de OUTRO cliente dentro do prazo
+     * mais o que está em pedido ainda EM_PROCESSAMENTO. A segunda parcela
+     * é o que a RN0044 quer dizer com "o bloqueio só é retirado quando a
+     * compra não for efetivada ou aprovada": entre finalizar e a
+     * operadora responder, a mercadoria continua comprometida.
+     */
+    public int disponivelPara(Instrumento instrumento, Long clienteId) {
+        long emCarrinhosAlheios = valor(carrinhoRepository.quantidadeBloqueadaPorOutros(
+                instrumento.getId(), clienteId, OffsetDateTime.now()));
+
+        long aguardandoAprovacao = valor(pedidoRepository.quantidadeComStatus(
+                instrumento.getId(), StatusPedido.EM_PROCESSAMENTO));
+
+        return (int) (instrumento.getQuantidadeEstoque() - emCarrinhosAlheios - aguardandoAprovacao);
+    }
+
+    public void validarDisponibilidade(Instrumento instrumento, int quantidade, Long clienteId) {
+        int disponivel = disponivelPara(instrumento, clienteId);
+
+        if (disponivel < quantidade) {
             throw new RegraDeNegocioException(
                     "Estoque insuficiente para %s: disponível %d."
-                            .formatted(instrumento.getNome(), instrumento.getQuantidadeEstoque()));
+                            .formatted(instrumento.getNome(), Math.max(0, disponivel)));
         }
+    }
+
+    /*
+     * RN0044 e RN0045 — vencido o prazo, TODOS os itens do carrinho saem.
+     *
+     * A RN0045 fala em retirar "todos itens do mesmo produto do carrinho
+     * que gerou o prazo"; como o prazo é um só por carrinho, vencer
+     * significa esvaziá-lo. Os itens não somem: vão para item_retirado,
+     * de onde a RNF0042 os apresenta.
+     */
+    private void aplicarExpiracao(Carrinho carrinho) {
+        OffsetDateTime agora = OffsetDateTime.now();
+
+        if (carrinho.getBloqueadoAte() == null
+                || carrinho.getBloqueadoAte().isAfter(agora)
+                || carrinho.getItens().isEmpty()) {
+            return;
+        }
+
+        List<ItemRetirado> retirados = new ArrayList<>();
+        for (ItemCarrinho item : carrinho.getItens()) {
+            ItemRetirado retirado = new ItemRetirado();
+            retirado.setCarrinhoId(carrinho.getId());
+            retirado.setInstrumento(item.getInstrumento());
+            retirado.setQuantidade(item.getQuantidade());
+            retirado.setValorUnitario(item.getValorUnitario());
+            retirados.add(retirado);
+        }
+        itemRetiradoRepository.saveAll(retirados);
+
+        // orphanRemoval apaga as linhas; o carrinho fica vazio, não some.
+        carrinho.getItens().clear();
+        carrinho.setBloqueadoAte(null);
+    }
+
+    private void renovarBloqueio(Carrinho carrinho) {
+        carrinho.setBloqueadoAte(OffsetDateTime.now().plus(prazoBloqueio));
+    }
+
+    private CarrinhoResponse responder(Carrinho carrinho) {
+        return carrinhoMapper.paraResponse(
+                carrinho, itensRetirados(carrinho.getId()), prazoBloqueio);
+    }
+
+    private long valor(Long consulta) {
+        return consulta == null ? 0L : consulta;
     }
 
     // Carrinho criado sob demanda: não existe linha de carrinho vazio

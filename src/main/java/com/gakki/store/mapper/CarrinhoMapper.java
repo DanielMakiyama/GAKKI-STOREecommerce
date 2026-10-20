@@ -3,11 +3,14 @@ package com.gakki.store.mapper;
 import com.gakki.store.domain.vendas.Carrinho;
 import com.gakki.store.domain.vendas.Instrumento;
 import com.gakki.store.domain.vendas.ItemCarrinho;
+import com.gakki.store.domain.vendas.ItemRetirado;
 import com.gakki.store.dto.response.CarrinhoResponse;
 import com.gakki.store.dto.response.ItemCarrinhoResponse;
+import com.gakki.store.dto.response.ItemRetiradoResponse;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.Comparator;
 import java.util.List;
 
@@ -29,7 +32,18 @@ public class CarrinhoMapper {
         return item;
     }
 
-    public CarrinhoResponse paraResponse(Carrinho carrinho) {
+    /*
+     * RNF0042 — além dos itens, a resposta carrega o estado do bloqueio
+     * e o que saiu por expiração.
+     *
+     * `podeComprar` é decidido aqui, no servidor: a regra manda
+     * desabilitar a compra enquanto houver item retirado, e deixar isso
+     * só no JavaScript da tela tornaria a regra contornável.
+     */
+    public CarrinhoResponse paraResponse(Carrinho carrinho,
+                                         List<ItemRetirado> retirados,
+                                         Duration prazoBloqueio) {
+
         List<ItemCarrinhoResponse> itens = carrinho.getItens().stream()
                 // Ordem estável por id: sem isso a lista pode trocar de
                 // ordem entre dois GETs, e a tela "pula" sozinha.
@@ -38,7 +52,18 @@ public class CarrinhoMapper {
                 .map(this::paraResponse)
                 .toList();
 
-        return new CarrinhoResponse(carrinho.getId(), itens, totalDe(carrinho));
+        List<ItemRetiradoResponse> retiradosResposta = retirados.stream()
+                .map(this::paraResponse)
+                .toList();
+
+        return new CarrinhoResponse(
+                carrinho.getId(),
+                itens,
+                totalDe(carrinho),
+                carrinho.getBloqueadoAte(),
+                prazoBloqueio.toSeconds(),
+                retiradosResposta,
+                !itens.isEmpty() && retiradosResposta.isEmpty());
     }
 
     public ItemCarrinhoResponse paraResponse(ItemCarrinho item) {
@@ -48,6 +73,16 @@ public class CarrinhoMapper {
                 item.getInstrumento().getNome(),
                 item.getQuantidade(),
                 item.getValorUnitario());
+    }
+
+    public ItemRetiradoResponse paraResponse(ItemRetirado item) {
+        return new ItemRetiradoResponse(
+                item.getId(),
+                item.getInstrumento().getId(),
+                item.getInstrumento().getNome(),
+                item.getQuantidade(),
+                item.getValorUnitario(),
+                item.getRetiradoEm());
     }
 
     // Soma dos itens, sem frete.

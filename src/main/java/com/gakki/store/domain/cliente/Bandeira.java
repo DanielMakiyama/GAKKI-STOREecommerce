@@ -29,7 +29,7 @@ public class Bandeira {
     @Column(nullable = false, length = 40, unique = true)
     private String nome;
 
-    /** Bandeira desativada não recebe cartões novos, mas preserva os existentes. */
+    // Bandeira desativada não recebe cartões novos, mas preserva os existentes
     @Column(nullable = false)
     private boolean ativo = true;
 

@@ -57,6 +57,24 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
 
     Page<Pedido> findByStatusOrderByCriadoEmDesc(StatusPedido status, Pageable paginacao);
 
+    /*
+     * RN0044 e RN0028 — quanto deste instrumento está comprometido por
+     * compras que ainda não foram resolvidas.
+     *
+     * Entre finalizar e a operadora responder, a mercadoria continua
+     * bloqueada: é o que a RN0044 quer dizer com "o bloqueio só deve ser
+     * retirado no caso da compra não ser efetivada ou aprovada". Aprovada,
+     * vira baixa; reprovada, o pedido sai de EM_PROCESSAMENTO e o
+     * bloqueio desaparece sozinho, sem ninguém precisar "desbloquear".
+     */
+    @Query("""
+            select coalesce(sum(i.quantidade), 0)
+            from ItemPedido i
+            where i.instrumento.id = :instrumentoId and i.pedido.status = :status
+            """)
+    Long quantidadeComStatus(@Param("instrumentoId") Long instrumentoId,
+                             @Param("status") StatusPedido status);
+
     // RF0038 — número único do pedido, no formato PED-00001.
     //
     // Sequence do PostgreSQL, mesmo motivo do código do cliente (RNF0035):

@@ -60,6 +60,11 @@ gakki:
     refresh-token-ttl: P7D
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  carrinho:
+    # RN0044 — prazo de bloqueio do item no carrinho, reiniciado a cada
+    # item incluído. ISO-8601: PT15M na demonstração, PT10S quando se
+    # quer ver a expiração acontecer sem esperar.
+    prazo-bloqueio: ${CARRINHO_PRAZO_BLOQUEIO:PT15M}
   pagamento:
     # RN0037 — a operadora de cartão é simulada nesta etapa, como o
     # próprio DRS autoriza em nota de rodapé. O critério de recusa é o
