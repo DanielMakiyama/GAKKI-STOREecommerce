@@ -11,6 +11,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.OffsetDateTime;
 
@@ -46,6 +47,11 @@ public class Notificacao {
     @Column(name = "lida", nullable = false)
     private boolean lida;
 
+    // @CreationTimestamp, e não só o DEFAULT now() da coluna: o Hibernate
+    // inclui toda coluna mapeada no INSERT, então sem isto ele grava um
+    // NULL explícito e o NOT NULL estoura. O default do banco só vale
+    // para quem insira por SQL.
+    @CreationTimestamp
     @Column(name = "criado_em", nullable = false, updatable = false)
     private OffsetDateTime criadoEm;
 

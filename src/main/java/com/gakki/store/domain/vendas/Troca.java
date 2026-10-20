@@ -19,6 +19,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -75,9 +76,17 @@ public class Troca {
     @JoinColumn(name = "cupom_id")
     private Cupom cupom;
 
+    // @CreationTimestamp, e não só o DEFAULT now() da coluna: o Hibernate
+    // inclui toda coluna mapeada no INSERT, então sem isto ele grava um
+    // NULL explícito e o NOT NULL estoura. O default do banco só vale
+    // para quem insira por SQL.
+    @CreationTimestamp
     @Column(name = "criado_em", nullable = false, updatable = false)
     private OffsetDateTime criadoEm;
 
+    // Sem @UpdateTimestamp de propósito: quem grava aqui é o service, a
+    // cada transição de estado da troca, e não toda vez que o Hibernate
+    // resolve sincronizar a entidade.
     @Column(name = "atualizado_em")
     private OffsetDateTime atualizadoEm;
 
