@@ -20,10 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-// RF0031, RF0032 e RF0034 — carrinho do cliente autenticado.
-//
-// Não existe /carrinho/{id}: o carrinho é sempre o de quem está no token.
-// Sem id na URL, não há como pedir o carrinho de outra pessoa.
+// RF0031, RF0032 e RF0034 - carrinho do cliente autenticado.
 
 @RestController
 @RequestMapping("/carrinho")
@@ -32,7 +29,7 @@ public class CarrinhoController {
 
     private final CarrinhoService carrinhoService;
 
-    // RF0033 — "iniciar a compra" abre esta mesma leitura; o backend não
+    // RF0033 - "iniciar a compra" abre esta mesma leitura; o backend não
     // distingue ver o carrinho de ir para o checkout.
     @GetMapping
     public ResponseEntity<CarrinhoResponse> verCarrinho(
@@ -41,9 +38,7 @@ public class CarrinhoController {
         return ResponseEntity.ok(carrinhoService.verCarrinho(usuario.getUsername()));
     }
 
-    // RF0031 — devolve o carrinho inteiro, não só o item criado: a tela
-    // precisa do novo total e do contador do cabeçalho na mesma resposta.
-    // Por isso 200, e não 201 com Location.
+    // RF0031 - devolve o carrinho inteiro, não só o item criado: a tela
     @PostMapping("/itens")
     public ResponseEntity<CarrinhoResponse> adicionar(
             @AuthenticationPrincipal UsuarioAutenticado usuario,
@@ -74,10 +69,6 @@ public class CarrinhoController {
     }
 
     // RF0034 — prévia do frete para o endereço escolhido no checkout.
-    //
-    // O endereço é parâmetro obrigatório porque a fórmula depende dele.
-    // Este valor é só para a tela mostrar: o que entra no pedido é
-    // recalculado no finalizarCompra (contrato de Vendas v3, decisão 14).
     @GetMapping("/frete")
     public ResponseEntity<FreteResponse> calcularFrete(
             @AuthenticationPrincipal UsuarioAutenticado usuario,
@@ -87,13 +78,7 @@ public class CarrinhoController {
                 usuario.getUsername(), enderecoEntregaId));
     }
 
-    /*
-     * RNF0042 — devolve ao carrinho um item retirado por expiração.
-     *
-     * POST porque recria um recurso que havia saído, e reinicia o prazo
-     * de bloqueio. O id é o do item retirado, não o do item de carrinho:
-     * aquele já não existe.
-     */
+    // RNF0042 — devolve ao carrinho um item retirado por expiração.
     @PostMapping("/retirados/{id}/restaurar")
     public ResponseEntity<CarrinhoResponse> restaurar(
             @AuthenticationPrincipal UsuarioAutenticado usuario,
@@ -102,13 +87,8 @@ public class CarrinhoController {
         return ResponseEntity.ok(carrinhoService.restaurar(usuario.getUsername(), id));
     }
 
-    /*
-     * O outro caminho da RNF0042 — desistir do item retirado.
-     *
-     * Devolve o carrinho em vez de 204 porque o que a tela precisa saber
-     * é se a compra já está liberada, e isso vem no `podeComprar` da
-     * resposta: sem corpo, ela teria de fazer um GET logo depois.
-     */
+    // O outro caminho da RNF0042 — desistir do item retirado.
+
     @DeleteMapping("/retirados/{id}")
     public ResponseEntity<CarrinhoResponse> descartar(
             @AuthenticationPrincipal UsuarioAutenticado usuario,
@@ -117,8 +97,7 @@ public class CarrinhoController {
         return ResponseEntity.ok(carrinhoService.descartar(usuario.getUsername(), id));
     }
 
-    // Ao expirar, o carrinho inteiro é retirado de uma vez; dispensar item
-    // por item seria atrito sem propósito.
+    // Ao expirar, o carrinho inteiro é retirado de uma vez
     @DeleteMapping("/retirados")
     public ResponseEntity<CarrinhoResponse> descartarTodos(
             @AuthenticationPrincipal UsuarioAutenticado usuario) {
