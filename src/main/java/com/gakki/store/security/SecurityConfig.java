@@ -77,6 +77,11 @@ public class SecurityConfig {
                         // leitura — não existe POST /instrumentos nesta
                         // fatia, então liberar o GET não abre escrita.
                         .requestMatchers(HttpMethod.GET, "/instrumentos", "/instrumentos/*").permitAll()
+                        // Tabela de domínio, como as bandeiras: só nomes
+                        // de categoria, sem dado de cliente (RN0012).
+                        // A análise de vendas que a usa (/analise/vendas)
+                        // continua exigindo token de administrador.
+                        .requestMatchers(HttpMethod.GET, "/categorias").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         // A autorização fina de cada endpoint fica no
                         // @PreAuthorize do controller, ao lado do método
