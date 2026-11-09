@@ -13,13 +13,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/*
- * RN0046 — as notificações do cliente.
- *
- * Só leitura. A regra manda o sistema gerar a notificação; quem a gera é
- * o fluxo de troca, e marcar como lida não é comportamento que nenhum
- * requisito descreva.
- */
+// RN0046 - as notificações do cliente.
+
 @RestController
 @RequestMapping("/notificacoes")
 @RequiredArgsConstructor
