@@ -228,6 +228,24 @@ public final class ApiDeApoio {
         return (System.nanoTime() - inicio) / 1_000_000L;
     }
 
+    /**
+     * Status HTTP de um GET, sem lançar exceção quando ele é de erro.
+     *
+     * <p>Para os casos que precisam afirmar a recusa em si — 401 sem
+     * token, 403 com token do perfil errado (RF0055) — e não apenas que a
+     * chamada falhou. {@code token} nulo chama sem autenticação.
+     */
+    public static int statusDeConsulta(String caminho, String token) {
+        HttpRequest requisicao = (token == null ? requisicao(caminho) : autenticada(caminho, token))
+                .GET()
+                .build();
+        try {
+            return CLIENTE.send(requisicao, HttpResponse.BodyHandlers.ofString()).statusCode();
+        } catch (Exception e) {
+            throw new IllegalStateException("Falha ao chamar " + requisicao.uri(), e);
+        }
+    }
+
     // ------------------------------------------------------------
     // Carrinho — itens retirados (RNF0042)
     // ------------------------------------------------------------

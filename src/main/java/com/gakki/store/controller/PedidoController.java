@@ -23,7 +23,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 
-// RF0038 a RF0040 — pedidos do cliente e ciclo de vida administrado.
+// RF0038 a RF0040 - pedidos do cliente e ciclo de vida administrado.
 
 @RestController
 @RequestMapping("/pedidos")
@@ -32,12 +32,8 @@ public class PedidoController {
 
     private final PedidoService pedidoService;
 
-    // RF0038 — finalização da compra. 201 com Location, como toda criação
-    // de recurso no projeto.
-    //
-    // O corpo vem junto porque a tela de confirmação precisa do número do
-    // pedido, do status e do eventual cupom de troco imediatamente — um
-    // 201 vazio obrigaria a um GET logo em seguida.
+    // RF0038 - finalização da compra, como toda criação de recurso no projeto.
+
     @PostMapping
     public ResponseEntity<PedidoResponse> finalizarCompra(
             @AuthenticationPrincipal UsuarioAutenticado usuario,
@@ -53,9 +49,7 @@ public class PedidoController {
         return ResponseEntity.created(localizacao).body(pedido);
     }
 
-    // Paginada, como toda listagem do projeto. O mock devolvia um array
-    // puro: o Pedidos.jsx lê `.content`, mesma adaptação que o painel
-    // administrativo já levou.
+    // Paginada, como toda listagem do projeto.
     @GetMapping
     public ResponseEntity<PaginaResponse<PedidoResponse>> meusPedidos(
             @AuthenticationPrincipal UsuarioAutenticado usuario,
@@ -64,15 +58,8 @@ public class PedidoController {
         return ResponseEntity.ok(pedidoService.meusPedidos(usuario.getUsername(), paginacao));
     }
 
-    /*
-     * RF0039 — a fila do administrador, em rota própria.
-     *
-     * Poderia ser o mesmo GET /pedidos devolvendo coisas diferentes
-     * conforme o papel de quem pergunta, mas o projeto já decidiu o
-     * contrário quando separou /clientes/me de /clientes: a rota diz o
-     * escopo, e não o token. Uma rota que muda de significado conforme
-     * quem chama é a que mais vaza dado por engano.
-     */
+    // RF0039 - a fila do administrador, em rota própria.
+
     @GetMapping("/administracao")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PaginaResponse<PedidoResponse>> pedidosParaAdministracao(

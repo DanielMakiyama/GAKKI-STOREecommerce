@@ -6,6 +6,8 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -306,6 +308,88 @@ public final class BancoDeApoio {
             }
         } catch (Exception e) {
             throw new IllegalStateException("Falha ao consultar a troca " + numero + " em " + URL, e);
+        }
+    }
+
+    // ------------------------------------------------------------
+    // Análise de vendas (RF0055)
+    //
+    // O valor esperado dos casos é calculado aqui, e não pela própria
+    // API: comparar o sistema com ele mesmo passaria mesmo com a soma
+    // errada. Por isso o SQL é outro, de propósito — os limites de data
+    // chegam prontos do teste (no fuso da loja) e a categoria entra por
+    // EXISTS, sem o date_trunc nem o GROUP BY do AnaliseVendasRepository.
+    // ------------------------------------------------------------
+
+    /** Soma dos itens das compras ENTREGUE da categoria em [de, ateExclusivo). */
+    public static BigDecimal totalEntregue(String categoria, OffsetDateTime de, OffsetDateTime ateExclusivo) {
+        return totalVendido(categoria, de, ateExclusivo, true);
+    }
+
+    /**
+     * Mesma soma, só das compras com qualquer outro status.
+     *
+     * <p>Serve de pré-condição ao caso que verifica a exclusão: sem compra
+     * fora de ENTREGUE no período, "não entrou" não provaria nada.
+     */
+    public static BigDecimal totalForaDeEntregue(String categoria, OffsetDateTime de, OffsetDateTime ateExclusivo) {
+        return totalVendido(categoria, de, ateExclusivo, false);
+    }
+
+    private static BigDecimal totalVendido(String categoria, OffsetDateTime de, OffsetDateTime ateExclusivo,
+                                           boolean entregue) {
+        String sql = """
+                SELECT coalesce(sum(ip.quantidade * ip.valor_unitario), 0)
+                  FROM pedido p
+                  JOIN item_pedido ip ON ip.pedido_id = p.id
+                 WHERE (p.status = 'ENTREGUE') = ?
+                   AND p.criado_em >= ?
+                   AND p.criado_em <  ?
+                   AND EXISTS (SELECT 1
+                                 FROM instrumento_categoria ic
+                                 JOIN categoria c ON c.id = ic.categoria_id
+                                WHERE ic.instrumento_id = ip.instrumento_id
+                                  AND c.nome = ?)""";
+
+        try (Connection conexao = conectar();
+             PreparedStatement comando = conexao.prepareStatement(sql)) {
+
+            comando.setBoolean(1, entregue);
+            comando.setObject(2, de);
+            comando.setObject(3, ateExclusivo);
+            comando.setString(4, categoria);
+            try (ResultSet r = comando.executeQuery()) {
+                r.next();
+                return r.getBigDecimal(1);
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException("Falha ao somar as vendas de " + categoria + " em " + URL, e);
+        }
+    }
+
+    /** Categorias do instrumento, em ordem alfabética (RN0012). */
+    public static List<String> categoriasDoInstrumento(String codigo) {
+        String sql = """
+                SELECT c.nome
+                  FROM instrumento i
+                  JOIN instrumento_categoria ic ON ic.instrumento_id = i.id
+                  JOIN categoria c ON c.id = ic.categoria_id
+                 WHERE i.codigo = ?
+                 ORDER BY c.nome""";
+
+        try (Connection conexao = conectar();
+             PreparedStatement comando = conexao.prepareStatement(sql)) {
+
+            comando.setString(1, codigo);
+            List<String> nomes = new ArrayList<>();
+            try (ResultSet r = comando.executeQuery()) {
+                while (r.next()) {
+                    nomes.add(r.getString(1));
+                }
+            }
+            return nomes;
+        } catch (Exception e) {
+            throw new IllegalStateException("Falha ao consultar as categorias de " + codigo + " em " + URL, e);
         }
     }
 
