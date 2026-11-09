@@ -1,12 +1,7 @@
 package com.gakki.store.mapper;
 
-/**
- * Normalização e mascaramento de campos formatados.
- *
- * <p>Fica numa classe só porque CPF e CEP chegam com máscara de telas
- * diferentes e precisam ser gravados do mesmo jeito. Duas cópias da
- * mesma limpeza divergem — uma passa a aceitar ponto, a outra não.
- */
+// Normalização e mascaramento de campos formatados.
+
 final class Formatos {
 
     private Formatos() {

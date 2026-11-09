@@ -7,7 +7,6 @@ import jakarta.validation.constraints.Positive;
 //
 // Zero não é aceito: esvaziar a linha é DELETE, não PUT com quantidade 0.
 // O stepper da tela já não deixa baixar de 1, então o front funciona sem
-// mudança — o mock é que tratava 0 como remoção.
 
 public record AtualizarQuantidadeRequest(
 

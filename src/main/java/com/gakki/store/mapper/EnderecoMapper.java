@@ -20,19 +20,8 @@ public class EnderecoMapper {
         return endereco;
     }
 
-    /**
-     * RNF0034 — alteração do endereço sem tocar no resto do cadastro.
-     *
-     * <p>Não mexe em {@code principal}: essa marcação tem endpoint
-     * próprio ({@code PATCH .../principal}), porque mudá-la exige
-     * desmarcar o anterior na mesma transação. Deixá-la aqui permitiria
-     * criar um segundo principal por um PUT comum, e o índice parcial do
-     * banco recusaria a operação.
-     *
-     * <p>Também não mexe em {@code entrega} e {@code cobranca} na
-     * atualização: quem as altera precisa passar pela verificação da
-     * RN0021/RN0022, que vive no service.
-     */
+    // RNF0034 — alteração do endereço sem tocar no resto do cadastro.
+
     public void aplicar(EnderecoRequest requisicao, Endereco endereco) {
         endereco.setApelido(requisicao.apelido().trim());
         endereco.setTipoResidencia(requisicao.tipoResidencia());
@@ -68,12 +57,8 @@ public class EnderecoMapper {
                 endereco.isPrincipal());
     }
 
-    /**
-     * Campo opcional em branco vira NULL.
-     *
-     * <p>Sem isso o banco acumula string vazia e NULL significando a
-     * mesma coisa, e toda consulta precisa testar os dois.
-     */
+    // Campo opcional em branco vira NULL.
+
     private String vazioViraNulo(String valor) {
         if (valor == null || valor.isBlank()) {
             return null;

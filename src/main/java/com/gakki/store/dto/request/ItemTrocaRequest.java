@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
 // Uma linha da solicitação de troca (RF0041).
+
 public record ItemTrocaRequest(
 
         @NotNull(message = "Informe o item do pedido.")

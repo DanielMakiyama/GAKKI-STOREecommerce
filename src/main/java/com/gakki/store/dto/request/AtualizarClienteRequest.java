@@ -11,26 +11,8 @@ import org.hibernate.validator.constraints.br.CPF;
 
 import java.time.LocalDate;
 
-/**
- * RF0022 — alteração dos dados cadastrais.
- *
- * <p>Todos os campos de identificação são alteráveis, inclusive e-mail e
- * CPF. O RF0022 não os exclui, e recusá-los seria o sistema decidir por
- * conta própria que um erro de digitação no cadastro é permanente.
- *
- * <p>As duas alterações têm consequências que o service trata:
- *
- * <ul>
- *   <li><b>E-mail</b> é a credencial de login e o {@code subject} do
- *       JWT. Trocá-lo invalida o token que o cliente tem na mão, então a
- *       resposta traz um par de tokens novo.</li>
- *   <li><b>CPF</b> e <b>e-mail</b> são únicos no banco: repetir o de
- *       outro cadastro devolve 409, como no cadastro inicial.</li>
- * </ul>
- *
- * <p>Senha não entra aqui — a RF0028 exige que ela seja alterável
- * isoladamente, e a RNF0034 diz o mesmo sobre endereços.
- */
+// RF0022 — alteração dos dados cadastrais.
+
 public record AtualizarClienteRequest(
 
         @NotBlank(message = "Informe o nome completo")

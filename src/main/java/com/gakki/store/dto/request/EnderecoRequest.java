@@ -7,17 +7,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-/**
- * RN0023 — composição do endereço.
- *
- * <p>Todos os campos são obrigatórios exceto {@code complemento} e
- * {@code observacoes}; a regra cita observações como o único opcional, e
- * complemento é ausência legítima (casa sem apartamento).
- *
- * <p>As marcações {@code entrega} e {@code cobranca} são ignoradas no
- * cadastro inicial: lá o endereço nasce servindo aos dois fins, que é o
- * que satisfaz a RN0021 e a RN0022 com um registro só.
- */
+// RN0023 - composição do endereço.
+
 public record EnderecoRequest(
 
         @NotBlank(message = "Informe um apelido para o endereço")

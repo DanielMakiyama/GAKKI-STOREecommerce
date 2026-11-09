@@ -13,14 +13,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class ClienteMapper {
 
-    /**
-     * Monta a entidade a partir do cadastro.
-     *
-     * <p>Recebe o {@link Usuario} e o código já prontos porque os dois
-     * dependem de coisas que o mapper não deve conhecer: o hash da senha
-     * vem do PasswordEncoder e o código vem de uma sequence do banco.
-     * Mapper converte formato; quem decide valor é o service.
-     */
+    // Monta a entidade a partir do cadastro.
+
     public Cliente paraEntidade(RegistrarClienteRequest requisicao, Usuario usuario, String codigo) {
         Cliente cliente = new Cliente();
         cliente.setUsuario(usuario);

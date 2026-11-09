@@ -7,17 +7,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-/**
- * RN0024 / RN0025 — cartão de crédito do cliente.
- *
- * <p>Não recebe número completo nem código de segurança. A RN0024 os
- * lista, mas armazená-los exigiria certificação PCI-DSS; num fluxo real
- * eles vão direto ao gateway, que devolve um token. O que fica é o
- * suficiente para o cliente reconhecer o cartão no checkout.
- *
- * <p>{@code bandeiraId} referencia o cadastro de bandeiras (RN0025), em
- * vez de aceitar o nome como texto livre.
- */
+//RN0024 / RN0025 — cartão de crédito do cliente.
+
 public record CartaoRequest(
 
         @NotBlank(message = "Informe um apelido para o cartão")

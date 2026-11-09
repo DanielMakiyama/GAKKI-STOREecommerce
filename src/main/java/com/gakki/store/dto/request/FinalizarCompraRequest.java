@@ -14,9 +14,6 @@ import java.util.List;
 // As duas listas são opcionais e se combinam — a compra pode ser só
 // cartão, só cupom ou os dois (RF0037). Que a soma cubra o total é regra
 // de negócio, validada no service.
-//
-// O @Valid na lista é o que faz a validação descer para cada linha de
-// cartão; sem ele, só a lista em si seria checada.
 
 public record FinalizarCompraRequest(
 
