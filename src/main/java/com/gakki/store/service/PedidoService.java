@@ -32,29 +32,8 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Locale;
 
-/*
- * Ciclo de vida da venda, do carrinho à entrega.
- *
- * Finalização (RF0038) na primeira metade do arquivo; as transições de
- * status (RN0037 a RN0040) na segunda. É onde cupom e cartão se
- * encontram, e por isso é aqui que moram a RN0034 (piso de R$10 por
- * cartão) e a RN0035 (o piso cai quando há cupom): nenhuma das duas se
- * decide olhando uma linha de pagamento isolada.
- *
- * O trajeto implementado, nos passos do CDU02:
- *
- *   finalizar (P4)  -> EM_PROCESSAMENTO
- *   confirmarPagamento (P5, P6)
- *        operadora aprova  -> APROVADA   + baixa em estoque
- *        operadora recusa   -> REPROVADA  (estoque intacto)
- *   despachar (P7)  -> EM_TRANSPORTE
- *   confirmarEntrega (P8) -> ENTREGUE
- *
- * A validação da forma de pagamento é um passo à parte, e não o fecho da
- * finalização, por exigência da própria RF0038: "após a finalização o
- * status da compra deve ser EM PROCESSAMENTO". Fundir os dois faria o
- * pedido nascer já aprovado e o status exigido nunca existiria.
- */
+// Ciclo de vida da venda, do carrinho à entrega.
+
 @Service
 @RequiredArgsConstructor
 public class PedidoService {
@@ -72,14 +51,8 @@ public class PedidoService {
     private final PedidoMapper pedidoMapper;
     private final OperadoraDeCartao operadora;
 
-    /*
-     * Uma transação só, do começo ao fim (RF0038).
-     *
-     * Grava o pedido, os itens, as linhas de pagamento, marca os cupons
-     * como usados, emite o cupom de troco e esvazia o carrinho. Qualquer
-     * falha no meio desfaz tudo — o estado intermediário "cupom gasto,
-     * pedido inexistente" não pode acontecer.
-     */
+    // Uma transação só, do começo ao fim (RF0038).
+
     @Transactional
     public PedidoResponse finalizarCompra(String email, FinalizarCompraRequest requisicao) {
         Cliente cliente = clienteDoEmail(email);
@@ -90,9 +63,7 @@ public class PedidoService {
             throw new RegraDeNegocioException("Não é possível finalizar uma compra com o carrinho vazio.");
         }
 
-        // RNF0042 — enquanto houver item retirado por expiração, a compra
-        // fica desabilitada. A trava é aqui, e não só no botão da tela:
-        // regra que vive em JavaScript é regra contornável.
+        // RNF0042 — enquanto houver item retirado por expiração, a compra fica desabilitada.
         if (!carrinhoService.itensRetirados(carrinho.getId()).isEmpty()) {
             throw new RegraDeNegocioException(
                     "Há itens retirados do carrinho por expiração do prazo. "
@@ -100,12 +71,11 @@ public class PedidoService {
         }
 
         // RN0031 conferida de novo agora, e não só na adição: entre pôr
-        // no carrinho e fechar a compra pode ter passado tempo.
         carrinho.getItens().forEach(item ->
                 carrinhoService.validarDisponibilidade(
                         item.getInstrumento(), item.getQuantidade(), cliente.getId()));
 
-        // Valores calculados aqui, nunca lidos da requisição (decisão 14).
+        // Valores calculados aqui, nunca lidos da requisição
         BigDecimal valorItens = carrinhoMapper.totalDe(carrinho);
         BigDecimal valorFrete = carrinhoService.calcularFrete(carrinho, endereco);
         BigDecimal valorTotal = valorItens.add(valorFrete);
@@ -150,15 +120,8 @@ public class PedidoService {
                         .map(pedidoMapper::paraResponse));
     }
 
-    // ------------------------------------------------------------------
-    // Ciclo de vida do pedido — ações do administrador (P5 a P8 do CDU02)
-    // ------------------------------------------------------------------
 
-    /*
-     * RF0039 — a fila do painel administrativo, com filtro de status
-     * opcional. Sem o filtro devolve todos os pedidos, que é o estado
-     * inicial da aba "Pedidos".
-     */
+    // Ciclo de vida do pedido - ações do administrador
     @Transactional(readOnly = true)
     public PaginaResponse<PedidoResponse> pedidosParaAdministracao(String status, Pageable paginacao) {
         StatusPedido filtro = statusInformado(status);
@@ -170,23 +133,8 @@ public class PedidoService {
         return PaginaResponse.de(pagina.map(pedidoMapper::paraResponse));
     }
 
-    /*
-     * RN0037 e RN0038 — validação da forma de pagamento, e a mudança de
-     * status que ela determina. Corresponde ao ponto de extensão PE1 do
-     * CDU02, instanciado no passo P5.1.
-     *
-     * Aprovada, a compra dá baixa em estoque (RF0053). Reprovada, não dá:
-     * é literalmente o que a RN0028 manda — "somente deve-se dar baixa no
-     * estoque de itens cuja a compra tenha sido efetivada". Por isso a
-     * baixa vive aqui, no passo que decide a efetivação, e não na
-     * finalização.
-     *
-     * PONTO EM ABERTO, não resolvido por suposição: o DRS não diz o que
-     * acontece com os cupons de uma compra REPROVADA. Eles foram
-     * consumidos na finalização (RF0037) e, do jeito que está, continuam
-     * consumidos. Devolvê-los seria comportamento que nenhum requisito
-     * descreve. Registrado para consulta ao professor.
-     */
+    //RN0037 e RN0038 — validação da forma de pagamento
+
     @Transactional
     public PedidoResponse confirmarPagamento(Long pedidoId) {
         Pedido pedido = pedidoParaAdministracao(pedidoId);
@@ -204,11 +152,8 @@ public class PedidoService {
         return pedidoMapper.paraResponse(pedido);
     }
 
-    /*
-     * RF0039 e RN0039 — despacho. Só pedido APROVADA pode ser despachado:
-     * o passo P7.1 do CDU02 diz que o administrador seleciona entre as
-     * compras com esse status.
-     */
+    // RF0039 e RN0039 — despacho. Só pedido APROVADA pode ser despachado
+
     @Transactional
     public PedidoResponse despachar(Long pedidoId) {
         Pedido pedido = pedidoParaAdministracao(pedidoId);
@@ -217,10 +162,8 @@ public class PedidoService {
         return pedidoMapper.paraResponse(pedido);
     }
 
-    /*
-     * RF0040 e RN0040 — confirmação de entrega. Fecha o ciclo de vida da
-     * compra e é o que habilita a solicitação de troca, pela RN0043.
-     */
+    // RF0040 e RN0040 - confirmação de entrega.
+
     @Transactional
     public PedidoResponse confirmarEntrega(Long pedidoId) {
         Pedido pedido = pedidoParaAdministracao(pedidoId);
@@ -229,22 +172,8 @@ public class PedidoService {
         return pedidoMapper.paraResponse(pedido);
     }
 
-    /*
-     * RF0053 — baixa do total de itens vendidos.
-     *
-     * Mexe na quantidade do próprio instrumento, que é onde vive o saldo.
-     * A tabela item_estoque registra ENTRADAS, não saldo: dar baixa
-     * inserindo linha negativa lá violaria o CHECK da RN0061, que exige
-     * quantidade maior que zero, e com razão.
-     *
-     * Dentro da transação o instrumento é entidade gerenciada, então o
-     * UPDATE sai no commit por dirty checking — não há `save` a chamar.
-     *
-     * O saldo pode ter mudado entre a finalização e a aprovação. Tratar
-     * essa janela é a RN0032, fora do escopo desta fatia; aqui a compra é
-     * barrada com 409 em vez de gravar estoque negativo, e o pedido fica
-     * em EM_PROCESSAMENTO para o administrador decidir.
-     */
+    // RF0053 — baixa do total de itens vendidos.
+
     private void darBaixaEmEstoque(Pedido pedido) {
         for (ItemPedido item : pedido.getItens()) {
             Instrumento instrumento = item.getInstrumento();
@@ -261,12 +190,6 @@ public class PedidoService {
         }
     }
 
-    /*
-     * O ciclo de vida é uma sequência, não um conjunto de interruptores.
-     * Despachar um pedido ainda EM_PROCESSAMENTO pularia a validação de
-     * pagamento e entregaria mercadoria não paga — daí a recusa com 409,
-     * que é conflito de estado, e não erro de requisição.
-     */
     private void exigirStatus(Pedido pedido, StatusPedido esperado, String acao) {
         if (pedido.getStatus() != esperado) {
             throw new ConflitoException(
@@ -296,19 +219,8 @@ public class PedidoService {
         return status.name().replace('_', ' ');
     }
 
-    /*
-     * RN0034 e RN0035 — as duas regras de pagamento, juntas porque são a
-     * mesma decisão vista de dois ângulos.
-     *
-     * Sem cupom: a soma dos cartões tem de fechar o total exato, e cada
-     * linha precisa de pelo menos R$10 (RN0034).
-     *
-     * Com cupom: o valor em cupons é sempre aproveitado por inteiro — é o
-     * que a RN0035 chama de "considerar sempre o valor máximo dos cupons".
-     * Se ainda faltar, o cartão cobre a diferença SEM piso de R$10, que é
-     * a exceção que a própria RN0035 abre. Se os cupons já cobrem tudo,
-     * cartão nenhum pode entrar: seria cobrar por algo já pago.
-     */
+    // RN0034 e RN0035 - as duas regras de pagamento
+
     private void validarPagamento(Cliente cliente,
                                   List<PagamentoCartaoRequest> linhas,
                                   List<Cupom> cupons,

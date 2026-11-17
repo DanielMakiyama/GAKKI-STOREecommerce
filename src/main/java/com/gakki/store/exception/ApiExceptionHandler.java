@@ -22,15 +22,7 @@ import java.time.OffsetDateTime;
 import java.util.Comparator;
 import java.util.List;
 
-/**
- * Tradução de exceção para resposta HTTP, em formato ProblemDetail
- * (RFC 7807).
- *
- * <p>Estende {@link ResponseEntityExceptionHandler} para herdar o
- * tratamento das exceções que o próprio Spring MVC lança — JSON
- * malformado, método não suportado, parâmetro ausente — que de outra
- * forma escapariam para o handler genérico e virariam 500.
- */
+
 @RestControllerAdvice
 public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
@@ -67,14 +59,6 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
                 "Você não tem permissão para executar esta operação.", requisicao);
     }
 
-    /**
-     * Rede de segurança para as constraints do banco.
-     *
-     * <p>O service confere unicidade antes de gravar, mas entre a
-     * consulta e o INSERT existe uma janela em que outra requisição pode
-     * ter inserido o mesmo e-mail. Quando isso acontece, quem recusa é o
-     * índice único — e a resposta precisa continuar sendo 409, não 500.
-     */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ProblemDetail tratarViolacaoDeIntegridade(DataIntegrityViolationException ex,
                                                      HttpServletRequest requisicao) {
@@ -83,7 +67,6 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
                 "A operação viola uma restrição de integridade dos dados.", requisicao);
     }
 
-    /** Último recurso: nada de stack trace para o cliente, tudo no log do servidor. */
     @ExceptionHandler(Exception.class)
     public ProblemDetail tratarInesperado(Exception ex, HttpServletRequest requisicao) {
         log.error("Erro não tratado em {}", requisicao.getRequestURI(), ex);
@@ -91,7 +74,6 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
                 "Ocorreu um erro inesperado. Tente novamente em alguns instantes.", requisicao);
     }
 
-    /** Falhas de Bean Validation nos DTOs de entrada (RN0026, RNF0031, RN0023). */
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex,
                                                                   HttpHeaders cabecalhos,

@@ -13,12 +13,6 @@ public interface CupomRepository extends JpaRepository<Cupom, Long> {
     // cupons" mostra os dois estados, com a etiqueta Utilizado/Disponível.
     List<Cupom> findByClienteIdOrderByUtilizadoAscValorDesc(Long clienteId);
 
-    // Resolve os códigos enviados no checkout.
-    //
-    // O clienteId entra na consulta junto com os códigos: um cupom de
-    // outra pessoa não é "encontrado e recusado", ele simplesmente não
-    // aparece. O service compara a quantidade devolvida com a pedida e
-    // responde 400 se faltar algum — sem dizer se o código existe.
     List<Cupom> findByClienteIdAndCodigoIn(Long clienteId, Collection<String> codigos);
 
     boolean existsByCodigo(String codigo);

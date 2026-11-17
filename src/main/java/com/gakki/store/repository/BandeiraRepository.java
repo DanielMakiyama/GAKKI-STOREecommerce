@@ -10,10 +10,6 @@ public interface BandeiraRepository extends JpaRepository<Bandeira, Long> {
 
     List<Bandeira> findByAtivoTrueOrderByNomeAsc();
 
-    /**
-     * RN0025 — só bandeira registrada e ativa pode receber cartão novo.
-     * A checagem do "ativa" vive na própria consulta: buscar por id e
-     * conferir a flag depois abriria espaço para alguém esquecer o segundo passo.
-     */
+    // RN0025 — só bandeira registrada e ativa pode receber cartão novo.
     Optional<Bandeira> findByIdAndAtivoTrue(Long id);
 }

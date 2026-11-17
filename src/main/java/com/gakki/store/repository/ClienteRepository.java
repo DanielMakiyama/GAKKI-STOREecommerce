@@ -15,7 +15,6 @@ public interface ClienteRepository
         extends JpaRepository<Cliente, Long>, JpaSpecificationExecutor<Cliente> {
 
     // Busca o cliente a partir do e-mail que veio no token.
-
     @EntityGraph(attributePaths = "usuario")
     Optional<Cliente> findByUsuarioEmail(String email);
 

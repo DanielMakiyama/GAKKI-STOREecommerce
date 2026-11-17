@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 // RN0046 - as notificações do cliente.
-
 @RestController
 @RequestMapping("/notificacoes")
 @RequiredArgsConstructor

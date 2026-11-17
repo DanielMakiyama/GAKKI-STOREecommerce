@@ -22,14 +22,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 
-/**
- * Dados cadastrais do cliente (RN0026).
- *
- * <p>Não tem coleções de endereços e cartões de propósito. Verificar a
- * RN0022 com {@code enderecoRepository.countByClienteIdAndEntregaTrue}
- * custa um COUNT; com uma coleção mapeada, custaria carregar todos os
- * endereços do cliente para contar em memória.
- */
+// Dados cadastrais do cliente (RN0026).
+
 @Entity
 @Table(name = "cliente")
 @Getter
@@ -45,14 +39,14 @@ public class Cliente {
     @JoinColumn(name = "usuario_id", nullable = false, unique = true)
     private Usuario usuario;
 
-    /** Código único no formato CLI-0001 (RNF0035). */
+    // Código único no formato CLI-0001 (RNF0035).
     @Column(nullable = false, length = 20, unique = true)
     private String codigo;
 
     @Column(nullable = false, length = 150)
     private String nome;
 
-    /** Somente dígitos — a máscara é responsabilidade da tela. */
+    // Somente dígitos — a máscara é responsabilidade da tela.
     @Column(nullable = false, length = 11, unique = true)
     private String cpf;
 

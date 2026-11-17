@@ -10,11 +10,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/**
- * Bandeira de cartão aceita pelo sistema (RN0025).
- *
- * <p>Tabela de domínio, populada pela migration V3.
- */
+// Bandeira de cartão aceita pelo sistema (RN0025).
+
 @Entity
 @Table(name = "bandeira")
 @Getter

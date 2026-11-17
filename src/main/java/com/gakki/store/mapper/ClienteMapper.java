@@ -14,7 +14,6 @@ import org.springframework.stereotype.Component;
 public class ClienteMapper {
 
     // Monta a entidade a partir do cadastro.
-
     public Cliente paraEntidade(RegistrarClienteRequest requisicao, Usuario usuario, String codigo) {
         Cliente cliente = new Cliente();
         cliente.setUsuario(usuario);
@@ -27,14 +26,7 @@ public class ClienteMapper {
         return cliente;
     }
 
-    /**
-     * RF0022 — aplica os campos livres da alteração.
-     *
-     * <p>E-mail e CPF ficam de fora de propósito, embora o DTO os
-     * traga: os dois são únicos no banco, e quem precisa comparar com o
-     * valor atual e devolver 409 é o service. O mapper converte formato;
-     * decidir se a mudança é permitida não é trabalho dele.
-     */
+    // RF0022 - aplica os campos livres da alteração.
     public void aplicar(AtualizarClienteRequest requisicao, Cliente cliente) {
         cliente.setNome(requisicao.nome().trim());
         cliente.setGenero(requisicao.genero());
@@ -42,16 +34,7 @@ public class ClienteMapper {
         aplicarTelefone(requisicao.telefone(), cliente);
     }
 
-    /**
-     * Cadastro visto pelo próprio dono, com o CPF por inteiro.
-     *
-     * <p>A máscara existe para que o CPF de um cliente não circule em
-     * tela de administrador, log de navegador ou captura de tela alheia.
-     * Contra o próprio titular ela não protege nada — ele sabe o próprio
-     * CPF — e atrapalha: desde que a RF0022 passou a permitir corrigi-lo,
-     * um formulário preenchido com {@code ***.456.789-**} gravaria a
-     * máscara de volta no banco.
-     */
+    // Cadastro visto pelo próprio dono, com o CPF por inteiro.
     public ClienteResponse paraResponseDoDono(Cliente cliente) {
         return montar(cliente, cliente.getCpf());
     }

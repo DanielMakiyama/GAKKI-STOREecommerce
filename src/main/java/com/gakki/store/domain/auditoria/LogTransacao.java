@@ -19,14 +19,6 @@ import java.time.OffsetDateTime;
 
 // Log de transação (RNF0012): para toda escrita, data, hora, usuário
 // responsável e os dados alterados.
-//
-// Fica em domain.auditoria, e não em domain.vendas, porque o log não é
-// conceito de venda: ele cobre também endereço e cartão quando o fluxo de
-// compra os toca (contrato de Vendas v3, decisão 8).
-//
-// Guardar os dados alterados numa tabela, e não só numa linha de arquivo
-// de log, é o que o "manter os dados alterados" do RNF0012 exige —
-// implica poder consultar depois.
 
 @Entity
 @Table(name = "log_transacao")

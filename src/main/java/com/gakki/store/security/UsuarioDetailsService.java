@@ -20,9 +20,6 @@ public class UsuarioDetailsService implements UserDetailsService {
     @Override
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String email) {
-        // O e-mail é gravado em minúsculas; normalizar aqui evita que
-        // "Daniel@x.com" e "daniel@x.com" sejam tratados como contas
-        // diferentes no login.
         Usuario usuario = usuarioRepository.findByEmail(email.toLowerCase(Locale.ROOT))
                 .orElseThrow(() -> new UsernameNotFoundException("Credenciais inválidas"));
         return new UsuarioAutenticado(usuario);

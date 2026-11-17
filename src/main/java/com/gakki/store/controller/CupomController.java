@@ -12,17 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-// RF0037 — cupons do cliente autenticado.
-//
-// Só leitura: não existe cadastro de cupom nesta fase. Os promocionais
-// vêm do seed e os de troca são emitidos pelo troco do pagamento
-// (RN0036), nunca por requisição do cliente — se existisse POST aqui,
-// qualquer um emitiria dinheiro para si mesmo.
-//
-// Lista sem paginação, ao contrário das outras: a quantidade é limitada
-// pela natureza do dado — cupons de um cliente só, e já consumidos saem
-// de circulação. Se um dia virar promoção em massa, vira Pageable.
-
+// RF0037 - cupons do cliente autenticado.
 @RestController
 @RequestMapping("/cupons")
 @RequiredArgsConstructor

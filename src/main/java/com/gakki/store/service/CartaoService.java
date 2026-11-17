@@ -19,15 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.YearMonth;
 import java.util.List;
 
-/**
- * RF0027 — cartões do cliente, com as garantias da RN0024 e RN0025.
- *
- * <p>Diferença importante em relação ao endereço: <b>não existe regra de
- * mínimo</b>. A RN0021 e a RN0022 exigem endereço; nenhuma regra exige
- * cartão. Por isso remover o último cartão é permitido, enquanto remover
- * o último endereço de entrega devolve 409. As duas telas parecem
- * simétricas, as regras não são.
- */
+// RF0027 - cartões do cliente, com as garantias da RN0024 e RN0025.
+
 @Service
 @RequiredArgsConstructor
 public class CartaoService {
@@ -37,12 +30,7 @@ public class CartaoService {
     private final ClienteRepository clienteRepository;
     private final CartaoMapper cartaoMapper;
 
-    /**
-     * Cartão informado no cadastro — opcional (RF0027).
-     *
-     * <p>Nasce preferencial por ser o único do cliente. Sem
-     * {@code @Transactional} próprio: participa da transação do cadastro.
-     */
+    // Cartão informado no cadastro — opcional (RF0027).
     public Cartao criarNoCadastro(Cliente cliente, CartaoRequest requisicao) {
         Bandeira bandeira = buscarBandeiraValida(requisicao.bandeiraId());
         validarValidade(requisicao);
@@ -60,7 +48,7 @@ public class CartaoService {
                 .toList();
     }
 
-    /** RF0027 — o cliente pode ter diversos cartões. */
+    // RF0027 — o cliente pode ter diversos cartões.
     @Transactional
     public CartaoResponse adicionar(String email, CartaoRequest requisicao) {
         Cliente cliente = clienteDoEmail(email);
@@ -69,8 +57,6 @@ public class CartaoService {
 
         Cartao cartao = cartaoMapper.paraEntidade(requisicao, cliente, bandeira);
 
-        // Primeiro cartão do cliente assume como preferencial — senão o
-        // checkout não teria nenhum sugerido.
         boolean primeiro = cartaoRepository
                 .findByClienteIdOrderByPreferencialDescIdAsc(cliente.getId()).isEmpty();
         cartao.setPreferencial(primeiro);
@@ -90,12 +76,7 @@ public class CartaoService {
         return cartaoMapper.paraResponse(cartao);
     }
 
-    /**
-     * Exclusão física do cartão.
-     *
-     * <p>Sem verificação de mínimo: nenhuma regra obriga o cliente a ter
-     * cartão. Se o removido era o preferencial, o próximo assume.
-     */
+    // Exclusão física do cartão.
     @Transactional
     public void remover(String email, Long cartaoId) {
         Cliente cliente = clienteDoEmail(email);
@@ -112,21 +93,16 @@ public class CartaoService {
         }
     }
 
-    /** RF0027 — deve haver um cartão configurado como preferencial. */
+    // RF0027 — deve haver um cartão configurado como preferencial.
     @Transactional
     public void definirPreferencial(String email, Long cartaoId) {
         Cliente cliente = clienteDoEmail(email);
         buscarDoCliente(cartaoId, cliente.getId());
-
-        // Mesmo cuidado do endereço principal: o índice
-        // ux_cartao_preferencial não admite dois, então o antigo sai
-        // antes de o novo entrar. E a nova busca é necessária porque o
-        // UPDATE em massa desanexa as instâncias do contexto.
         cartaoRepository.desmarcarPreferencial(cliente.getId());
         buscarDoCliente(cartaoId, cliente.getId()).setPreferencial(true);
     }
 
-    /** RN0025 — a bandeira precisa estar registrada e ativa no sistema. */
+    // RN0025 - a bandeira precisa estar registrada e ativa no sistema.
     public Bandeira buscarBandeiraValida(Long bandeiraId) {
         return bandeiraRepository.findByIdAndAtivoTrue(bandeiraId)
                 .orElseThrow(() -> new RegraDeNegocioException(
@@ -140,13 +116,7 @@ public class CartaoService {
                 .toList();
     }
 
-    /**
-     * Cartão vencido não entra.
-     *
-     * <p>A validação declarativa garante mês entre 1 e 12 e ano dentro
-     * de uma faixa, mas "não estar vencido" depende da data de hoje —
-     * regra de negócio, e não de formato.
-     */
+    // Cartão vencido não entra.
     private void validarValidade(CartaoRequest requisicao) {
         YearMonth validade = YearMonth.of(requisicao.validadeAno(), requisicao.validadeMes());
         if (validade.isBefore(YearMonth.now())) {

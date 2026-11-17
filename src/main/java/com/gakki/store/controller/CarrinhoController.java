@@ -87,8 +87,7 @@ public class CarrinhoController {
         return ResponseEntity.ok(carrinhoService.restaurar(usuario.getUsername(), id));
     }
 
-    // O outro caminho da RNF0042 — desistir do item retirado.
-
+    // O outro caminho da RNF0042 - desistir do item retirado.
     @DeleteMapping("/retirados/{id}")
     public ResponseEntity<CarrinhoResponse> descartar(
             @AuthenticationPrincipal UsuarioAutenticado usuario,

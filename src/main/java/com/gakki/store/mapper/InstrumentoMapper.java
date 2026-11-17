@@ -12,10 +12,7 @@ import java.util.List;
 public class InstrumentoMapper {
 
     public InstrumentoResponse paraResponse(Instrumento instrumento) {
-        // getNome() no fabricante e a leitura das categorias só não
-        // disparam consulta porque quem chama usa @EntityGraph. Mapper
-        // não busca nada por conta própria — é conversor, não camada de
-        // acesso a dados.
+
         List<String> categorias = instrumento.getCategorias().stream()
                 .map(Categoria::getNome)
                 .sorted(Comparator.naturalOrder())

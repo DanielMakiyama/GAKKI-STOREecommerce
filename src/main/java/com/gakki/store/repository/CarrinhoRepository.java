@@ -13,16 +13,7 @@ public interface CarrinhoRepository extends JpaRepository<Carrinho, Long> {
     // UNIQUE(cliente_id) garante que no máximo uma linha volta daqui.
     Optional<Carrinho> findByClienteId(Long clienteId);
 
-    // Carrinho com os itens e o instrumento de cada item, numa consulta só.
-    //
-    // Sem o JOIN FETCH, mostrar um carrinho de cinco itens custaria 1
-    // consulta do carrinho + 1 dos itens + 5 dos instrumentos. É o N+1
-    // clássico, e com open-in-view: false ele nem chegaria a acontecer —
-    // viraria LazyInitializationException fora da transação.
-    //
-    // Sem DISTINCT de propósito: o JOIN FETCH de coleção repete a linha do
-    // carrinho, mas o Hibernate 6 já elimina a duplicata da entidade raiz
-    // sozinho. O DISTINCT só acrescentaria um sort no banco.
+
     @Query("""
             select c from Carrinho c
             left join fetch c.itens i
@@ -31,18 +22,6 @@ public interface CarrinhoRepository extends JpaRepository<Carrinho, Long> {
             """)
     Optional<Carrinho> buscarComItens(@Param("clienteId") Long clienteId);
 
-    /*
-     * RN0044 — quanto deste instrumento está bloqueado nos carrinhos de
-     * OUTROS clientes.
-     *
-     * Bloqueio aqui não é coluna: é consequência de haver item num
-     * carrinho cujo prazo ainda não venceu. Guardar um contador separado
-     * em `instrumento` criaria um segundo lugar para a verdade, e os dois
-     * divergiriam no primeiro erro de fluxo.
-     *
-     * O próprio cliente fica de fora porque a RN0031 compara o total que
-     * ficará no carrinho DELE — contá-lo aqui seria somar duas vezes.
-     */
     @Query("""
             select coalesce(sum(i.quantidade), 0)
             from ItemCarrinho i

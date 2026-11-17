@@ -32,38 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * RF0055 — análise do histórico de vendas por categoria, com o gráfico de
- * linhas do RNF0043 e o limite de tempo do RNF0011.
- *
- * <p>Um método por cenário do roteiro, na mesma numeração.
- *
- * <p><b>De onde vêm os valores esperados.</b> Não do mesmo SQL que o
- * sistema usa: comparar o sistema com ele mesmo passaria mesmo com o
- * cálculo errado. O {@code BancoDeApoio.totalEntregue} soma as compras
- * ENTREGUE por outro caminho — limites de data montados aqui no teste, no
- * fuso da loja, e a categoria por {@code EXISTS}, sem o
- * {@code date_trunc} nem o {@code GROUP BY} do repository. Para o teste
- * não passar com um banco vazio (zero igual a zero), os casos conferem
- * também alguns valores fixos da massa V1000.
- *
- * <p><b>A massa V1000</b> tem 17 compras de abril a setembro de 2026, das
- * quais 5 com status fora de ENTREGUE. Os totais ENTREGUE dela (itens,
- * sem frete):
- *
- * <pre>
- *                        abr    mai    jun    jul    ago    set
- *   Guitarras           1400   1505      0   2800    175   1400
- *   Teclados               0   2800      0   2800      0      0
- *   Pedais              1400      0    700    700      0   1400
- *   Interfaces de Áudio    0      0   1260      0      0   1260
- *   Acessórios             0    105      0      0    175      0
- * </pre>
- *
- * <p>O jogo de cordas (INST-0005) pertence a duas categorias, Guitarras e
- * Acessórios, e entra no total das duas: é por isso que Guitarras tem 1505
- * em maio (uma guitarra de 1400 mais três jogos de cordas de 35).
- */
+//RF0055 — análise do histórico de vendas por categoria, com o gráfico de linhas do RNF0043 e o limite de tempo do RNF0011.
+
 @DisplayName("RF0055 — análise do histórico de vendas por categoria")
 class RF0055AnaliseVendasTest extends BaseVendasE2ETest {
 
@@ -348,14 +318,7 @@ class RF0055AnaliseVendasTest extends BaseVendasE2ETest {
         espera.until(nav -> !nav.findElements(PaginaAnaliseVendas.CATEGORIAS).isEmpty());
     }
 
-    /**
-     * Preenche o período, deixa marcadas exatamente as categorias pedidas
-     * e consulta.
-     *
-     * <p>Espera a tabela anterior sair antes de esperar a nova: a tela
-     * limpa o resultado ao consultar, e sem isso o teste leria os números
-     * da consulta passada (cenários 4 e 6).
-     */
+
     private void consultar(LocalDate inicio, LocalDate fim, String... categorias) {
         preencherData(PaginaAnaliseVendas.INICIO, inicio);
         preencherData(PaginaAnaliseVendas.FIM, fim);
@@ -380,16 +343,6 @@ class RF0055AnaliseVendasTest extends BaseVendasE2ETest {
         esperarPor(PaginaAnaliseVendas.TABELA);
     }
 
-    /**
-     * Preenche um {@code <input type="date">} com a data em ISO.
-     *
-     * <p>Pelo valor do campo, e não digitando: o que se digita num campo
-     * de data depende do idioma do Chrome (dd/mm/aaaa em português,
-     * mm/dd/aaaa em inglês), e o mesmo teste passaria numa máquina e
-     * falharia em outra. O evento {@code input} disparado em seguida é o
-     * que o React escuta no {@code onChange}, então a tela recebe a data
-     * exatamente como se o usuário a tivesse escolhido no calendário.
-     */
     private void preencherData(By campo, LocalDate data) {
         WebElement elemento = esperarPor(campo);
         ((JavascriptExecutor) navegador).executeScript("""
@@ -415,7 +368,6 @@ class RF0055AnaliseVendasTest extends BaseVendasE2ETest {
         return valores;
     }
 
-    /** Todos os valores da tabela, por "categoria MM/AAAA". */
     private Map<String, BigDecimal> valoresDaTela() {
         return navegador.findElements(PaginaAnaliseVendas.VALORES).stream().collect(Collectors.toMap(
                 celula -> celula.getDomAttribute("data-categoria") + " " + celula.getDomAttribute("data-mes"),
@@ -444,13 +396,6 @@ class RF0055AnaliseVendasTest extends BaseVendasE2ETest {
     // Valores esperados, calculados no banco por outro caminho
     // ------------------------------------------------------------
 
-    /**
-     * Confere cada célula da tela com a soma das compras ENTREGUE no banco.
-     *
-     * <p>Mês a mês, recortado pelo período: se o início é 15/05, o maio
-     * esperado soma só de 15 a 31 de maio — é o que a tela promete ao
-     * aceitar uma data, e não um mês, como início.
-     */
     private void conferirComOBanco(LocalDate inicio, LocalDate fim, List<String> categorias) {
         for (String categoria : categorias) {
             for (YearMonth mes : mesesEntre(inicio, fim)) {
@@ -482,7 +427,6 @@ class RF0055AnaliseVendasTest extends BaseVendasE2ETest {
         return inicioDoDia(mes.atDay(1));
     }
 
-    /** Primeiro instante do mês seguinte: o limite é exclusivo. */
     private static OffsetDateTime fimDe(YearMonth mes) {
         return inicioDoDia(mes.plusMonths(1).atDay(1));
     }

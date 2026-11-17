@@ -17,15 +17,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.time.OffsetDateTime;
 
-/**
- * Respostas 401 e 403 no mesmo formato ProblemDetail do resto da API.
- *
- * <p>Essas duas situações são barradas pelos filtros do Spring Security,
- * antes de qualquer controller existir — então o
- * {@code @RestControllerAdvice} nunca é acionado. Sem esta classe, o
- * cliente receberia a página de erro padrão do container em HTML, e o
- * front, que espera JSON, quebraria ao tentar interpretá-la.
- */
+// Respostas 401 e 403 no mesmo formato ProblemDetail do resto da API.
+
 @Component
 @RequiredArgsConstructor
 public class TratadorDeErroDeSeguranca implements AuthenticationEntryPoint, AccessDeniedHandler {

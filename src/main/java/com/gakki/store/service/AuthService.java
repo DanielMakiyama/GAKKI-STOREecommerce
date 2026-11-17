@@ -30,7 +30,6 @@ public class AuthService {
     private final JwtService jwtService;
 
     //Login
-
     @Transactional(readOnly = true)
     public LoginResponse autenticar(LoginRequest requisicao) {
         String email = requisicao.email().trim().toLowerCase(Locale.ROOT);
@@ -53,7 +52,6 @@ public class AuthService {
     }
 
     //troca o token de renovação por um par novo
-
     @Transactional(readOnly = true)
     public LoginResponse renovar(RenovarTokenRequest requisicao) {
         String token = requisicao.refreshToken();
@@ -73,12 +71,10 @@ public class AuthService {
         if (!usuario.isEnabled()) {
             throw new ContaInativaException("Este cadastro está inativo.");
         }
-
         return montarResposta(usuario);
     }
 
     // Emite uma sessão nova para um usuário já identificado.
-
     @Transactional(readOnly = true)
     public LoginResponse emitirSessao(String email) {
         return montarResposta((UsuarioAutenticado) usuarioDetailsService.loadUserByUsername(email));
@@ -94,7 +90,6 @@ public class AuthService {
     }
 
     // Nome mostrado no cabeçalho do front.
-
     private String nomeDeExibicao(UsuarioAutenticado usuario) {
         return clienteRepository.findByUsuarioEmail(usuario.getUsername())
                 .map(Cliente::getNome)

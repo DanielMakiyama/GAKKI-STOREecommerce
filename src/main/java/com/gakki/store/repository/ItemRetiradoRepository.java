@@ -10,8 +10,7 @@ import java.util.Optional;
 
 public interface ItemRetiradoRepository extends JpaRepository<ItemRetirado, Long> {
 
-    // RNF0042 — os itens retirados que a tela do carrinho precisa exibir.
-    // O instrumento vem junto porque a listagem mostra o nome dele.
+    // RNF0042 - os itens retirados que a tela do carrinho precisa exibir.
     @Query("""
             select r from ItemRetirado r
             join fetch r.instrumento
@@ -20,8 +19,6 @@ public interface ItemRetiradoRepository extends JpaRepository<ItemRetirado, Long
             """)
     List<ItemRetirado> doCarrinho(@Param("carrinhoId") Long carrinhoId);
 
-    // O carrinho entra na busca, não num if posterior: um item retirado
-    // de outra pessoa simplesmente não é encontrado.
     Optional<ItemRetirado> findByIdAndCarrinhoId(Long id, Long carrinhoId);
 
     void deleteByCarrinhoId(Long carrinhoId);

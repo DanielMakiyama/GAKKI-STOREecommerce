@@ -10,19 +10,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-/*
- * RN0012 — categorias de instrumento cadastradas.
- *
- * Rota pública, como /bandeiras: é uma tabela de domínio, sem dado de
- * cliente, que serve para montar listas de seleção. Hoje quem usa é a
- * tela de análise de vendas (RF0055); o filtro do catálogo, que também é
- * público, pode usar a mesma.
- *
- * Fica num controller próprio, e não dentro de /analise, porque a
- * categoria é um recurso da loja, e não da análise. O service é o da
- * análise porque é quem já monta essa lista, do mesmo jeito que o
- * BandeiraController usa o CartaoService.
- */
+// RN0012 - categorias de instrumento cadastradas.
+
 @RestController
 @RequestMapping("/categorias")
 @RequiredArgsConstructor

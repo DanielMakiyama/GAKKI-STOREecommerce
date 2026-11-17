@@ -6,14 +6,6 @@ import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
 // Finalização da compra (RF0038).
-//
-// Sem frete e sem total: o backend recalcula os dois a partir do carrinho
-// e do endereço (contrato de Vendas v3, decisão 14). Aceitar esses
-// valores do cliente deixaria o preço da compra sob controle de quem paga.
-//
-// As duas listas são opcionais e se combinam — a compra pode ser só
-// cartão, só cupom ou os dois (RF0037). Que a soma cubra o total é regra
-// de negócio, validada no service.
 
 public record FinalizarCompraRequest(
 

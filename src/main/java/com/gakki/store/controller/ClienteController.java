@@ -35,14 +35,12 @@ public class ClienteController {
     private final ClienteService clienteService;
 
     // RF0024 — o cliente lê o próprio cadastro. O id vem do token, não da URL.
-
     @GetMapping("/me")
     public ResponseEntity<ClienteResponse> meuPerfil(@AuthenticationPrincipal UsuarioAutenticado usuario) {
         return ResponseEntity.ok(clienteService.buscarPorEmail(usuario.getUsername()));
     }
 
     // RF0022 — altera os dados cadastrais. Devolve sessão nova quando o e-mail muda.
-
     @PutMapping("/me")
     public ResponseEntity<CadastroAtualizadoResponse> alterarMeuCadastro(
             @AuthenticationPrincipal UsuarioAutenticado usuario,
@@ -52,7 +50,6 @@ public class ClienteController {
     }
 
     // RF0028 — troca só a senha. 204 sem corpo: nada relacionado a senha volta na resposta.
-
     @PatchMapping("/me/senha")
     public ResponseEntity<Void> alterarMinhaSenha(
             @AuthenticationPrincipal UsuarioAutenticado usuario,
@@ -62,9 +59,7 @@ public class ClienteController {
         return ResponseEntity.noContent().build();
     }
 
-    // RF0024 — consulta administrativa. Os cinco filtros são opcionais e combináveis.
-    // @PreAuthorize fica ao lado do método, não num padrão de URL no SecurityConfig.
-
+    // RF0024 - consulta administrativa. Os cinco filtros são opcionais e combináveis.
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PaginaResponse<ClienteResumoResponse>> listar(
@@ -79,16 +74,14 @@ public class ClienteController {
                 clienteService.listar(nome, email, cpf, codigo, ativo, paginacao));
     }
 
-    // RF0024 — consulta administrativa de um cliente pelo id.
-
+    // RF0024 - consulta administrativa de um cliente pelo id.
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ClienteResponse> buscarPorId(@PathVariable Long id) {
         return ResponseEntity.ok(clienteService.buscarPorId(id));
     }
 
-    // RF0023 — o cliente encerra a própria conta. Não existe DELETE: o cadastro não é excluído.
-
+    // RF0023 - o cliente encerra a própria conta. Não existe DELETE: o cadastro não é excluído.
     @PatchMapping("/me/inativar")
     public ResponseEntity<Void> inativarMinhaConta(
             @AuthenticationPrincipal UsuarioAutenticado usuario) {
@@ -97,8 +90,7 @@ public class ClienteController {
         return ResponseEntity.noContent().build();
     }
 
-    // RF0023 — inativação pelo administrador.
-
+    // RF0023 - inativação pelo administrador.
     @PatchMapping("/{id}/inativar")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> inativar(@PathVariable Long id) {
@@ -106,8 +98,7 @@ public class ClienteController {
         return ResponseEntity.noContent().build();
     }
 
-    // RF0023 — reativação pelo administrador.
-
+    // RF0023 - reativação pelo administrador.
     @PatchMapping("/{id}/ativar")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> ativar(@PathVariable Long id) {

@@ -13,14 +13,7 @@ import java.util.Locale;
 @Component
 public class CartaoMapper {
 
-    /**
-     * A bandeira chega resolvida como entidade, e não como id.
-     *
-     * <p>Quem a busca é o service, que aproveita para conferir se ela
-     * existe e está ativa (RN0025). Se o mapper recebesse o id e fosse
-     * buscar sozinho, precisaria de um repository — e mapper com acesso
-     * a banco deixa de ser conversor e vira mais uma camada de regra.
-     */
+
     public Cartao paraEntidade(CartaoRequest requisicao, Cliente cliente, Bandeira bandeira) {
         Cartao cartao = new Cartao();
         cartao.setCliente(cliente);
@@ -32,8 +25,6 @@ public class CartaoMapper {
         cartao.setApelido(requisicao.apelido().trim());
         cartao.setUltimosDigitos(Formatos.somenteDigitos(requisicao.ultimosDigitos()));
         cartao.setBandeira(bandeira);
-        // Nome impresso em cartão é sempre em maiúsculas — normalizar
-        // aqui evita a mesma lista exibir "DANIEL" e "Daniel".
         cartao.setNomeTitular(requisicao.nomeTitular().trim().toUpperCase(Locale.ROOT));
         cartao.setValidadeMes(requisicao.validadeMes());
         cartao.setValidadeAno(requisicao.validadeAno());

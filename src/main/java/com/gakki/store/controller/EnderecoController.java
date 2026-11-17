@@ -22,9 +22,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.net.URI;
 import java.util.List;
 
-// RF0026 — endereços do cliente autenticado.
-// Controller separado: a RNF0034 exige alterar endereço sem mexer no cadastro.
-
+// RF0026 - endereços do cliente autenticado.
 @RestController
 @RequestMapping("/clientes/me/enderecos")
 @RequiredArgsConstructor
@@ -62,8 +60,7 @@ public class EnderecoController {
         return ResponseEntity.ok(enderecoService.atualizar(usuario.getUsername(), id, requisicao));
     }
 
-    // Exclusão física — 409 quando violaria a RN0021 ou a RN0022.
-
+    // Exclusão física - 409 quando violaria a RN0021 ou a RN0022.
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> remover(
             @AuthenticationPrincipal UsuarioAutenticado usuario,

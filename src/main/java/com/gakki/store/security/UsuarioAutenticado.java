@@ -9,13 +9,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.List;
 
-/**
- * Adapta {@link Usuario} ao contrato do Spring Security.
- *
- * <p>Existe para o domínio não precisar implementar {@code UserDetails}:
- * a entidade continua sendo só dado, e a dependência do framework fica
- * confinada no pacote de segurança.
- */
 public class UsuarioAutenticado implements UserDetails {
 
     private final Long id;
@@ -55,13 +48,8 @@ public class UsuarioAutenticado implements UserDetails {
         return email;
     }
 
-    /**
-     * RF0023 — cadastro inativado não autentica.
-     *
-     * <p>Devolver {@code false} aqui faz o próprio Spring Security
-     * recusar o login com DisabledException. A regra não depende de o
-     * AuthService lembrar de checar a flag.
-     */
+    // RF0023 — cadastro inativado não autentica.
+
     @Override
     public boolean isEnabled() {
         return ativo;

@@ -6,10 +6,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 // Acesso ao log de transação (RNF0012).
-//
-// A consulta por entidade existe porque o RNF0012 pede "manter os dados
-// alterados" — o que só faz sentido se for possível consultá-los depois.
-// Paginada, como toda listagem do projeto.
 
 public interface LogTransacaoRepository extends JpaRepository<LogTransacao, Long> {
 

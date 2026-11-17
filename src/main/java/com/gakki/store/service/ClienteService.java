@@ -28,9 +28,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Locale;
 
-/**
- * RF0021 — cadastro de cliente.
- */
+// RF0021 — cadastro de cliente.
+
 @Service
 @RequiredArgsConstructor
 public class ClienteService {
@@ -43,18 +42,10 @@ public class ClienteService {
     private final ClienteMapper clienteMapper;
     private final PasswordEncoder passwordEncoder;
 
-    /**
-     * Cria usuário, cliente, endereço e — se informado — cartão.
-     *
-     * <p>Tudo numa transação só. A RN0022 exige que todo cliente tenha
-     * endereço de entrega: em duas transações separadas, uma falha na
-     * segunda deixaria no banco exatamente o que a regra proíbe. Aqui,
-     * se qualquer passo falhar, nada é gravado.
-     */
+    // Cria usuário, cliente, endereço e se informado cartão.
     @Transactional
     public ClienteResponse cadastrar(RegistrarClienteRequest requisicao) {
-        // RNF0032 — Bean Validation enxerga um campo por vez e não
-        // compara dois; a igualdade só pode ser verificada aqui.
+        // RNF0032 — Bean Validation enxerga um campo por vez e não compara dois; a igualdade só pode ser verificada aqui.
         if (!requisicao.senha().equals(requisicao.confirmacaoSenha())) {
             throw new RegraDeNegocioException("A confirmação de senha não confere.");
         }
@@ -76,12 +67,9 @@ public class ClienteService {
         cliente.setCpf(cpf);
         clienteRepository.save(cliente);
 
-        // RN0021 e RN0022 — o endereço nasce com o cliente, servindo a
-        // entrega e a cobrança.
         enderecoService.criarNoCadastro(cliente, requisicao.endereco());
 
-        // RF0027 — cartão é opcional; nenhuma regra condiciona a
-        // existência do cliente a possuir um.
+        // RF0027 - cartão é opcional
         if (requisicao.cartao() != null) {
             cartaoService.criarNoCadastro(cliente, requisicao.cartao());
         }
@@ -89,24 +77,7 @@ public class ClienteService {
         return clienteMapper.paraResponse(cliente);
     }
 
-    /**
-     * RF0022 — alteração dos dados cadastrais.
-     *
-     * <p>Não precisa de {@code save()}: dentro de uma transação, o
-     * Hibernate detecta a mudança na entidade gerenciada e emite o
-     * UPDATE no commit. Chamar {@code save()} aqui não erraria, mas
-     * sugeriria que sem ele nada seria gravado.
-     *
-     * <p>E-mail e CPF são alteráveis, e cada um traz uma consequência
-     * tratada aqui: os dois são únicos no banco, então repetir o de
-     * outro cadastro devolve 409; e o e-mail é o {@code subject} do JWT,
-     * então trocá-lo mata o token que o cliente tem na mão. Sem emitir
-     * uma sessão nova, a tela levaria 401 logo depois de um salvamento
-     * bem-sucedido — o pior tipo de erro, porque parece aleatório.
-     *
-     * <p>A comparação é sempre contra o valor atual: reenviar o próprio
-     * e-mail não pode ser tratado como duplicidade.
-     */
+    // RF0022 - alteração dos dados cadastrais.
     @Transactional
     public CadastroAtualizadoResponse atualizar(String email, AtualizarClienteRequest requisicao) {
         Cliente cliente = clienteRepository.findByUsuarioEmail(email)
@@ -141,14 +112,7 @@ public class ClienteService {
         return new CadastroAtualizadoResponse(atualizado, sessao.token(), sessao.refreshToken());
     }
 
-    /**
-     * RF0028 — alteração isolada de senha.
-     *
-     * <p>Exige a senha atual: sem isso, um token roubado permitiria
-     * trocar a senha e tomar a conta em definitivo. A senha atual
-     * errada devolve 401, não 400 — o problema é a credencial, não o
-     * formato do pedido.
-     */
+    // RF0028 — alteração isolada de senha.
     @Transactional
     public void alterarSenha(String email, AlterarSenhaRequest requisicao) {
         Usuario usuario = usuarioRepository.findByEmail(email)

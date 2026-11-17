@@ -11,10 +11,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-/*
- * Conversor do fluxo de troca. Sem repository injetado, como todos os
- * mappers do projeto: quem resolve entidade é o service.
- */
 @Component
 @RequiredArgsConstructor
 public class TrocaMapper {
@@ -39,12 +35,6 @@ public class TrocaMapper {
                 itens);
     }
 
-    /*
-     * O nome do instrumento vem do item do pedido, que é a fotografia da
-     * compra — e não do cadastro atual. Uma troca pedida hoje sobre uma
-     * compra de meses atrás tem de mostrar o nome que o produto tinha na
-     * nota, mesmo que o catálogo já o tenha renomeado.
-     */
     public ItemTrocaResponse paraResponse(ItemTroca item) {
         return new ItemTrocaResponse(
                 item.getId(),

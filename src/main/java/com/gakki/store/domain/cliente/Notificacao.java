@@ -15,18 +15,8 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.OffsetDateTime;
 
-/*
- * Notificação ao cliente (RN0046).
- *
- * Mora em domain/cliente porque pertence ao cliente, não à venda: a
- * RN0046 é o primeiro emissor, mas nada no modelo amarra a notificação
- * ao fluxo de troca.
- *
- * Deliberadamente mínima. A regra manda "gerar uma notificação", sem
- * dizer canal, formato ou leitura — um registro consultável atende o
- * requisito, e inventar e-mail ou push seria criar requisito que o DRS
- * não tem.
- */
+// Notificação ao cliente (RN0046).
+
 @Entity
 @Table(name = "notificacao")
 @Getter
@@ -47,10 +37,6 @@ public class Notificacao {
     @Column(name = "lida", nullable = false)
     private boolean lida;
 
-    // @CreationTimestamp, e não só o DEFAULT now() da coluna: o Hibernate
-    // inclui toda coluna mapeada no INSERT, então sem isto ele grava um
-    // NULL explícito e o NOT NULL estoura. O default do banco só vale
-    // para quem insira por SQL.
     @CreationTimestamp
     @Column(name = "criado_em", nullable = false, updatable = false)
     private OffsetDateTime criadoEm;

@@ -12,15 +12,8 @@ import org.hibernate.validator.constraints.br.CPF;
 
 import java.time.LocalDate;
 
-/**
- * RF0021 — cadastro de cliente, com os dados obrigatórios da RN0026.
- *
- * <p>O endereço vem no mesmo payload, e não numa segunda requisição: a
- * RN0022 exige que todo cliente tenha endereço de entrega, e duas
- * chamadas deixariam no banco exatamente o que a regra proíbe caso a
- * segunda falhasse. Cartão é opcional — nenhuma regra condiciona a
- * existência do cliente a ter cartão.
- */
+// RF0021 - cadastro de cliente, com os dados obrigatórios da RN0026.
+
 public record RegistrarClienteRequest(
 
         @NotBlank(message = "Informe o nome completo")

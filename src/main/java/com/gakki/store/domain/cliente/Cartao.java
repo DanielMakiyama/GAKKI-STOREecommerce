@@ -13,13 +13,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/**
- * Cartão de crédito do cliente (RN0024, RN0025, RF0027).
- *
- * <p>Divergência consciente da RN0024: número completo e código de
- * segurança não são armazenados — exigiriam certificação PCI-DSS. Num
- * fluxo real esses dados vão direto ao gateway, que devolve um token.
- */
+// Cartão de crédito do cliente (RN0024, RN0025, RF0027).
+
 @Entity
 @Table(name = "cartao")
 @Getter
@@ -42,7 +37,7 @@ public class Cartao {
     @Column(nullable = false, length = 40)
     private String apelido;
 
-    /** Apenas os quatro últimos dígitos. */
+    // Apenas os quatro últimos dígitos.
     @Column(name = "ultimos_digitos", nullable = false, length = 4)
     private String ultimosDigitos;
 
@@ -55,7 +50,7 @@ public class Cartao {
     @Column(name = "validade_ano", nullable = false)
     private Short validadeAno;
 
-    /** Cartão sugerido por padrão no checkout (RF0027). */
+    // Cartão sugerido por padrão no checkout (RF0027).
     @Column(nullable = false)
     private boolean preferencial = false;
 

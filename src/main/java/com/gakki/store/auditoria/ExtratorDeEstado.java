@@ -15,11 +15,6 @@ import java.util.Map;
 // Lê o estado de uma entidade como um mapa campo → valor, para virar o
 // JSON do log (RNF0012).
 
-// Por que não serializar a entidade direto com Jackson: relação
-// bidirecional (Pedido tem itens, item tem pedido) entra em recursão
-// infinita, e tocar um campo LAZY dispara consulta no meio do flush. Aqui
-// as coleções são puladas e as relações viram só o id.
-
 final class ExtratorDeEstado {
 
     private ExtratorDeEstado() {
@@ -78,13 +73,6 @@ final class ExtratorDeEstado {
     }
 
     // Id de uma entidade relacionada, SEM inicializar o proxy.
-    //
-    // Chamar getId() no proxy dispararia o SELECT da entidade inteira, no
-    // meio do flush. O LazyInitializer já carrega o identificador — é o
-    // único dado que o proxy conhece antes de ser inicializado.
-    //
-    // Quando o campo não é proxy (relação já carregada), sobra ler o campo
-    // `id` por reflexão, que não dispara nada.
     private static Object idDe(Object entidadeRelacionada) {
         if (entidadeRelacionada instanceof HibernateProxy proxy) {
             return proxy.getHibernateLazyInitializer().getIdentifier();

@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-// RF0011 — catálogo. Rotas públicas: a vitrine da loja é visível antes do
+// RF0011 - catálogo. Rotas públicas: a vitrine da loja é visível antes do
 // login, como em qualquer e-commerce. Quem exige token é o carrinho.
 
 @RestController

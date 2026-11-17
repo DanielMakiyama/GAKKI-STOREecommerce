@@ -7,13 +7,9 @@ final class Formatos {
     private Formatos() {
     }
 
-   //Remove tudo que não for dígito. O banco guarda só números
     static String somenteDigitos(String valor) {
         return valor == null ? null : valor.replaceAll("\\D", "");
     }
-
-    //Esconde os blocos externos do CPF: {@code 12345678901} vira {@code ***.456.789-**}.
-
 
     static String mascararCpf(String cpf) {
         String digitos = somenteDigitos(cpf);

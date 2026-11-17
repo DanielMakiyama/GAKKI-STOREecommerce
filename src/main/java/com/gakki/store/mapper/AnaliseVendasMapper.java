@@ -9,15 +9,11 @@ import java.math.BigDecimal;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 
-/*
- * Conversões da análise de vendas (RF0055). Sem repository injetado,
- * como todos os mappers do projeto.
- */
+// Conversões da análise de vendas (RF0055).
+
 @Component
 public class AnaliseVendasMapper {
 
-    // MM/AAAA, o formato que o mock do front devolvia e que o eixo
-    // horizontal do gráfico mostra.
     private static final DateTimeFormatter FORMATO_MES = DateTimeFormatter.ofPattern("MM/yyyy");
 
     public CategoriaResponse paraResponse(Categoria categoria) {

@@ -12,15 +12,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 
-/**
- * Emissão e leitura dos tokens JWT.
- *
- * <p>Dois tipos de token, distinguidos pela claim {@code tipo}: o de
- * acesso é curto e acompanha toda requisição; o de renovação é longo e
- * só serve para obter um novo par. Sem essa marcação, um token de
- * acesso roubado poderia ser usado para renovar a sessão
- * indefinidamente.
- */
+// Emissão e leitura dos tokens JWT.
+
 @Service
 public class JwtService {
 

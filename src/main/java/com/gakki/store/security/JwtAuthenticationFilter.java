@@ -49,9 +49,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private void autenticar(HttpServletRequest requisicao, String email) {
         UserDetails usuario = usuarioDetailsService.loadUserByUsername(email);
 
-        // Conta inativada depois da emissão do token para de valer na
-        // requisição seguinte (RF0023) — o token continua assinado, mas
-        // o usuário não está mais habilitado.
         if (!usuario.isEnabled()) {
             return;
         }

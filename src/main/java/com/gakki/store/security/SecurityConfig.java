@@ -36,19 +36,12 @@ public class SecurityConfig {
     @Value("${gakki.cors.allowed-origins}")
     private String origensPermitidas;
 
-    /** RNF0033 — senha armazenada com BCrypt, nunca em texto claro. */
+    // RNF0033 — senha armazenada com BCrypt, nunca em texto claro.
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    /**
-     * Exposto para o AuthService usar no login.
-     *
-     * <p>Delegar ao AuthenticationManager em vez de comparar a senha na
-     * mão traz de graça a recusa de conta inativada: o Spring Security
-     * consulta {@code isEnabled()} e lança DisabledException (RF0023).
-     */
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuracao) throws Exception {
         return configuracao.getAuthenticationManager();
@@ -67,25 +60,11 @@ public class SecurityConfig {
                         .authenticationEntryPoint(tratadorDeErro)
                         .accessDeniedHandler(tratadorDeErro))
                 .authorizeHttpRequests(autorizacao -> autorizacao
-                        // Os caminhos aqui são relativos ao context-path
-                        // (/api/v1), que o container retira antes da
-                        // comparação.
                         .requestMatchers("/auth/registrar", "/auth/login", "/auth/refresh").permitAll()
                         .requestMatchers(HttpMethod.GET, "/bandeiras").permitAll()
-                        // A vitrine é pública, como em qualquer loja: o
-                        // cliente vê o catálogo antes de criar conta. Só
-                        // leitura — não existe POST /instrumentos nesta
-                        // fatia, então liberar o GET não abre escrita.
                         .requestMatchers(HttpMethod.GET, "/instrumentos", "/instrumentos/*").permitAll()
-                        // Tabela de domínio, como as bandeiras: só nomes
-                        // de categoria, sem dado de cliente (RN0012).
-                        // A análise de vendas que a usa (/analise/vendas)
-                        // continua exigindo token de administrador.
                         .requestMatchers(HttpMethod.GET, "/categorias").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
-                        // A autorização fina de cada endpoint fica no
-                        // @PreAuthorize do controller, ao lado do método
-                        // que ela protege.
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -95,9 +74,6 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuracao = new CorsConfiguration();
-        // Origens declaradas, não "*": o front roda em localhost:5173 e o
-        // backend em 8080, e liberar qualquer origem deixaria qualquer
-        // site chamar esta API com o token do usuário.
         configuracao.setAllowedOrigins(Arrays.stream(origensPermitidas.split(","))
                 .map(String::trim)
                 .filter(origem -> !origem.isEmpty())

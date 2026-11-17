@@ -1,6 +1,5 @@
 package com.gakki.store.exception;
 
-/** Recurso inexistente ou fora do alcance do usuário autenticado → HTTP 404. */
 public class RecursoNaoEncontradoException extends RuntimeException {
 
     public RecursoNaoEncontradoException(String mensagem) {

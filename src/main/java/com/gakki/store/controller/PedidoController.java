@@ -24,7 +24,6 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.net.URI;
 
 // RF0038 a RF0040 - pedidos do cliente e ciclo de vida administrado.
-
 @RestController
 @RequestMapping("/pedidos")
 @RequiredArgsConstructor
@@ -33,7 +32,6 @@ public class PedidoController {
     private final PedidoService pedidoService;
 
     // RF0038 - finalização da compra, como toda criação de recurso no projeto.
-
     @PostMapping
     public ResponseEntity<PedidoResponse> finalizarCompra(
             @AuthenticationPrincipal UsuarioAutenticado usuario,

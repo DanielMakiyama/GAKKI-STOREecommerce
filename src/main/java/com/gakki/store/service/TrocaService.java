@@ -31,21 +31,8 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Locale;
 
-/*
- * Fluxo de troca, da solicitação ao cupom (RF0041 a RF0045).
- *
- * Trajeto, nos passos do CDU02:
- *
- *   solicitar (P9)            -> EM_TROCA
- *   autorizar (P10)           -> TROCA_AUTORIZADA + notificação (RN0046)
- *   confirmarRecebimento (P11)-> TROCADO + reentrada opcional + cupom
- *
- * O status vive na troca. No pedido ele é espelhado apenas quando a
- * troca abrange a compra inteira — é o caso que a RN0041 destaca em
- * separado ("caso o cliente solicite a troca de toda a compra o status
- * do pedido deverá ser EM TROCA"). Numa troca parcial o pedido continua
- * ENTREGUE, porque parte da compra continua entregue de fato.
- */
+//Fluxo de troca, da solicitação ao cupom (RF0041 a RF0045).
+
 @Service
 @RequiredArgsConstructor
 public class TrocaService {
@@ -57,20 +44,13 @@ public class TrocaService {
     private final NotificacaoService notificacaoService;
     private final TrocaMapper trocaMapper;
 
-    /*
-     * RF0041 e RN0041 — o cliente seleciona itens de uma compra e o
-     * sistema gera o pedido de troca.
-     *
-     * A RN0043 é a porta de entrada: só compra ENTREGUE pode ser
-     * trocada. A checagem vem antes de qualquer outra coisa porque é a
-     * que define se o fluxo existe.
-     */
+    //RF0041 e RN0041 — o cliente seleciona itens de uma compra e o
+
     @Transactional
     public TrocaResponse solicitar(String email, SolicitarTrocaRequest requisicao) {
         Cliente cliente = clienteDoEmail(email);
 
         // O dono entra na busca: um pedido de outra pessoa simplesmente
-        // não é encontrado, e a resposta é 404 em vez de 403.
         Pedido pedido = pedidoRepository
                 .buscarComItens(requisicao.pedidoId(), cliente.getId())
                 .orElseThrow(() -> RecursoNaoEncontradoException.pedido(requisicao.pedidoId()));
@@ -93,9 +73,6 @@ public class TrocaService {
         for (ItemTrocaRequest linha : requisicao.itens()) {
             ItemPedido itemPedido = itemDoPedido(pedido, linha.itemPedidoId());
 
-            // Um item já em troca não pode entrar noutra: a coluna
-            // em_troca é o que impede a mesma unidade de gerar dois
-            // cupons.
             if (itemPedido.isEmTroca()) {
                 throw new ConflitoException(
                         "O item %s já faz parte de um pedido de troca."
@@ -122,7 +99,7 @@ public class TrocaService {
         }
         troca.setValor(valor);
 
-        // RN0041 — a compra inteira em troca espelha o status no pedido.
+        // RN0041 - a compra inteira em troca espelha o status no pedido.
         if (pedido.getItens().stream().allMatch(ItemPedido::isEmTroca)) {
             pedido.setStatus(StatusPedido.EM_TROCA);
         }
@@ -138,7 +115,7 @@ public class TrocaService {
                         .map(trocaMapper::paraResponse));
     }
 
-    // RF0043 — todas as trocas, com filtro de status opcional.
+    // RF0043 - todas as trocas, com filtro de status opcional.
     @Transactional(readOnly = true)
     public PaginaResponse<TrocaResponse> trocasParaAdministracao(String status, Pageable paginacao) {
         StatusTroca filtro = statusInformado(status);
@@ -150,13 +127,8 @@ public class TrocaService {
         return PaginaResponse.de(pagina.map(trocaMapper::paraResponse));
     }
 
-    /*
-     * RF0042 e RN0046 — autorização e notificação ao cliente.
-     *
-     * A notificação sai na mesma transação. Se a gravação falhar depois,
-     * o cliente não pode ficar avisado de uma autorização que não
-     * aconteceu.
-     */
+    // RF0042 e RN0046 - autorização e notificação ao cliente.
+
     @Transactional
     public TrocaResponse autorizar(Long trocaId) {
         Troca troca = trocaComItens(trocaId);
@@ -173,15 +145,8 @@ public class TrocaService {
         return trocaMapper.paraResponse(troca);
     }
 
-    /*
-     * RF0044, RF0045, RF0054 e RN0042 — o administrador confirma que os
-     * itens chegaram.
-     *
-     * Três efeitos numa transação só: a reentrada em estoque quando
-     * indicada, o cupom de troca emitido ao cliente e o status final.
-     * Emitir o cupom sem gravar o status deixaria o cliente com dinheiro
-     * e a troca eternamente em aberto.
-     */
+    // RF0044, RF0045, RF0054 e RN0042 — o administrador confirma que os itens chegaram.
+
     @Transactional
     public TrocaResponse confirmarRecebimento(Long trocaId, boolean retornaEstoque) {
         Troca troca = trocaComItens(trocaId);
@@ -204,16 +169,8 @@ public class TrocaService {
         return trocaMapper.paraResponse(troca);
     }
 
-    /*
-     * RF0054 — reentrada dos itens trocados.
-     *
-     * Soma na quantidade do instrumento, que é onde vive o saldo. Não
-     * cria linha em item_estoque de propósito: a RN0050 exige fornecedor,
-     * valor de custo e data de entrada para cada registro, e uma
-     * devolução não traz nenhum dos três. Inventar um fornecedor para
-     * caber na tabela seria pior que não registrar — e a RNF0012 já
-     * guarda quem fez, quando e o que mudou.
-     */
+    // RF0054 - reentrada dos itens trocados.
+
     private void darEntradaEmEstoque(Troca troca) {
         for (ItemTroca item : troca.getItens()) {
             Instrumento instrumento = item.getItemPedido().getInstrumento();
@@ -222,12 +179,8 @@ public class TrocaService {
         }
     }
 
-    /*
-     * RN0041 e RN0042 falam do status "do pedido ou da compra". O pedido
-     * só acompanha a troca quando ela cobre a compra inteira; numa troca
-     * parcial ele continua ENTREGUE, porque parte da compra continua
-     * entregue de fato.
-     */
+    // RN0041 e RN0042 falam do status "do pedido ou da compra".
+
     private void espelharNoPedido(Troca troca, StatusPedido de, StatusPedido para) {
         if (troca.getPedido().getStatus() == de) {
             troca.getPedido().setStatus(para);

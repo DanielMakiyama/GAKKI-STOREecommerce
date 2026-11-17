@@ -11,7 +11,7 @@ import org.hibernate.validator.constraints.br.CPF;
 
 import java.time.LocalDate;
 
-// RF0022 — alteração dos dados cadastrais.
+// RF0022 - alteração dos dados cadastrais.
 
 public record AtualizarClienteRequest(
 

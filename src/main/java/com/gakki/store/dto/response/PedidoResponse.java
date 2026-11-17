@@ -5,7 +5,6 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 // Pedido (RF0038), nos nomes que a tela "Meus pedidos" já lê.
-
 public record PedidoResponse(
         Long id,
         String numero,

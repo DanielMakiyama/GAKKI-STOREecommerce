@@ -23,7 +23,6 @@ import java.net.URI;
 import java.util.List;
 
 //RF0027 — cartões de crédito do cliente autenticado
-
 @RestController
 @RequestMapping("/clientes/me/cartoes")
 @RequiredArgsConstructor

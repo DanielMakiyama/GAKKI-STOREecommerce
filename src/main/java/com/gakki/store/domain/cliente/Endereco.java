@@ -17,13 +17,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/**
- * Endereço de entrega e/ou cobrança do cliente (RN0021, RN0022, RN0023).
- *
- * <p>{@code entrega} e {@code cobranca} são independentes porque o mesmo
- * endereço costuma servir aos dois fins — com um enum de tipo seria
- * preciso duplicar o registro para satisfazer as duas regras.
- */
+// Endereço de entrega e/ou cobrança do cliente (RN0021, RN0022, RN0023).
+
 @Entity
 @Table(name = "endereco")
 @Getter
@@ -39,7 +34,7 @@ public class Endereco {
     @JoinColumn(name = "cliente_id", nullable = false)
     private Cliente cliente;
 
-    /** Nome curto que identifica o endereço, ex.: Casa, Trabalho (RF0026). */
+    // Nome curto que identifica o endereço, ex.: Casa, Trabalho (RF0026).
     @Column(nullable = false, length = 40)
     private String apelido;
 
@@ -63,7 +58,7 @@ public class Endereco {
     @Column(nullable = false, length = 80)
     private String bairro;
 
-    /** Somente dígitos. */
+    // Somente dígitos.
     @Column(nullable = false, length = 8)
     private String cep;
 
@@ -76,7 +71,7 @@ public class Endereco {
     @Column(nullable = false, length = 60)
     private String pais = "Brasil";
 
-    /** Único campo opcional previsto pela RN0023. */
+    // Único campo opcional previsto pela RN0023.
     @Column(length = 255)
     private String observacoes;
 
@@ -86,7 +81,7 @@ public class Endereco {
     @Column(nullable = false)
     private boolean cobranca = false;
 
-    /** Endereço de entrega sugerido por padrão no checkout. */
+    // Endereço de entrega sugerido por padrão no checkout.
     @Column(nullable = false)
     private boolean principal = false;
 

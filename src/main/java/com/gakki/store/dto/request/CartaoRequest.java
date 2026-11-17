@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-//RN0024 / RN0025 — cartão de crédito do cliente.
+//RN0024 / RN0025 - cartão de crédito do cliente.
 
 public record CartaoRequest(
 

@@ -6,7 +6,6 @@ import com.gakki.store.domain.cliente.enums.Papel;
 import java.time.LocalDate;
 
 // Cadastro completo do cliente.
-
 public record ClienteResponse(
         Long id,
         String codigo,

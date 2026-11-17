@@ -20,8 +20,7 @@ public class EnderecoMapper {
         return endereco;
     }
 
-    // RNF0034 — alteração do endereço sem tocar no resto do cadastro.
-
+    // RNF0034 - alteração do endereço sem tocar no resto do cadastro.
     public void aplicar(EnderecoRequest requisicao, Endereco endereco) {
         endereco.setApelido(requisicao.apelido().trim());
         endereco.setTipoResidencia(requisicao.tipoResidencia());
@@ -58,7 +57,6 @@ public class EnderecoMapper {
     }
 
     // Campo opcional em branco vira NULL.
-
     private String vazioViraNulo(String valor) {
         if (valor == null || valor.isBlank()) {
             return null;
