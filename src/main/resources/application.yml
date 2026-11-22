@@ -72,6 +72,18 @@ gakki:
     # uma compra REPROVADA quando quiser, e acionável pela tela, porque
     # o cliente cadastra o cartão por lá.
     digitos-recusados: ${PAGAMENTO_DIGITOS_RECUSADOS:0000}
+  ia:
+    # RNF0044 — modelo aberto servido pelo Ollama na própria máquina.
+    url: ${IA_URL:http://localhost:11434}
+    modelo-base: "${IA_MODELO_BASE:llama3.2:3b}"
+    # 0 = só processador. Placas de vídeo antigas (ex.: AMD R9) geram texto corrompido.
+    num-gpu: ${IA_NUM_GPU:0}
+    # Janela de contexto em tokens: regras + catálogo + histórico + conversa.
+    num-ctx: ${IA_NUM_CTX:8192}
+    temperatura: 0.3
+    # Mantém o modelo na memória entre perguntas, evitando recarregar a cada uma.
+    keep-alive: 30m
+    timeout: ${IA_TIMEOUT:PT120S}
 
 logging:
   level:

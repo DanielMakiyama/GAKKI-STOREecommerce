@@ -59,6 +59,12 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
                 "Você não tem permissão para executar esta operação.", requisicao);
     }
 
+    // RNF0044 — IA fora do ar; o chat não chega aqui, ele degrada sozinho.
+    @ExceptionHandler(IaIndisponivelException.class)
+    public ProblemDetail tratarIaIndisponivel(IaIndisponivelException ex, HttpServletRequest requisicao) {
+        return montar(HttpStatus.SERVICE_UNAVAILABLE, "Assistente indisponível", ex.getMessage(), requisicao);
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ProblemDetail tratarViolacaoDeIntegridade(DataIntegrityViolationException ex,
                                                      HttpServletRequest requisicao) {
