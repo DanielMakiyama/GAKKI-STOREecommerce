@@ -64,6 +64,9 @@ public abstract class BaseVendasE2ETest extends BaseE2ETest {
      */
     private static final By CARTAO_CLIENTE = By.cssSelector("[data-perfil='cliente']");
 
+    // Mensagem de erro da página do produto (ProdutoDetalhe.jsx).
+    private static final By ERRO_PRODUTO = By.cssSelector("[data-testid='erro-produto']");
+
     protected String token;
 
     /**
@@ -83,6 +86,12 @@ public abstract class BaseVendasE2ETest extends BaseE2ETest {
         // no seguinte (RNF0042): sem esta linha, um caso falharia por
         // sujeira do vizinho e não por defeito do sistema.
         ApiDeApoio.descartarItensRetirados(token);
+
+        // Disponível = estoque - carrinhos alheios - pedidos EM_PROCESSAMENTO:
+        // as três linhas zeram o que casos anteriores deixaram.
+        BancoDeApoio.liberarBloqueiosDeOutrosClientes();
+        BancoDeApoio.reprovarPedidosEmProcessamento();
+        BancoDeApoio.restaurarEstoqueDoSeed();
     }
 
     // ------------------------------------------------------------
@@ -126,9 +135,16 @@ public abstract class BaseVendasE2ETest extends BaseE2ETest {
 
         clicar(PaginaProduto.BOTAO_ADICIONAR);
 
-        // Esperar o aviso, e não dormir: o POST do carrinho acontece
-        // entre o clique e a mensagem.
-        esperarPor(PaginaProduto.AVISO_ADICIONADO);
+        // Espera o aviso OU o erro: se o backend recusar, o teste falha
+        // com a mensagem da tela em vez de um timeout sem explicação.
+        espera.until(nav -> !nav.findElements(PaginaProduto.AVISO_ADICIONADO).isEmpty()
+                || !nav.findElements(ERRO_PRODUTO).isEmpty());
+
+        List<WebElement> erros = navegador.findElements(ERRO_PRODUTO);
+        if (!erros.isEmpty()) {
+            throw new AssertionError("O carrinho recusou " + codigoDoInstrumento
+                    + ": " + erros.get(0).getText());
+        }
     }
 
     protected void irParaCarrinho() {

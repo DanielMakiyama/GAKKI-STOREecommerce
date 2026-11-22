@@ -274,6 +274,64 @@ public final class BancoDeApoio {
         }
     }
 
+    // RN0044 — carrinho de outro cliente com prazo vigente bloqueia o estoque.
+    // Vence esses prazos para a reserva de um caso anterior não sobrar.
+    public static int liberarBloqueiosDeOutrosClientes() {
+        String sql = """
+                UPDATE carrinho
+                   SET bloqueado_ate = now() - interval '1 second'
+                 WHERE bloqueado_ate > now()
+                   AND cliente_id <> (SELECT id FROM cliente WHERE codigo = ?)""";
+
+        try (Connection conexao = conectar();
+             PreparedStatement comando = conexao.prepareStatement(sql)) {
+
+            comando.setString(1, CLIENTE_DEMO);
+            return comando.executeUpdate();
+
+        } catch (Exception e) {
+            throw new IllegalStateException("Falha ao liberar bloqueios de carrinho em " + URL, e);
+        }
+    }
+
+    // Pedido EM_PROCESSAMENTO também segura estoque (CarrinhoService.disponivelPara).
+    // Cada execução finaliza compras que ninguém aprova; reprovar as que
+    // sobraram devolve essas unidades. Seeds não têm pedido neste status.
+    public static int reprovarPedidosEmProcessamento() {
+        String sql = "UPDATE pedido SET status = 'REPROVADA' WHERE status = 'EM_PROCESSAMENTO'";
+
+        try (Connection conexao = conectar();
+             PreparedStatement comando = conexao.prepareStatement(sql)) {
+
+            return comando.executeUpdate();
+
+        } catch (Exception e) {
+            throw new IllegalStateException("Falha ao reprovar pedidos pendentes em " + URL, e);
+        }
+    }
+
+    // Volta o estoque dos 6 instrumentos do V999 aos valores do seed.
+    // Cada execução da suíte compra de verdade; sem isto o estoque acaba.
+    public static void restaurarEstoqueDoSeed() {
+        String sql = """
+                UPDATE instrumento i
+                   SET quantidade_estoque = s.quantidade
+                  FROM (VALUES ('INST-0001', 5), ('INST-0002', 3), ('INST-0003', 8),
+                               ('INST-0004', 2), ('INST-0005', 50), ('INST-0006', 0))
+                       AS s(codigo, quantidade)
+                 WHERE i.codigo = s.codigo""";
+
+        try (Connection conexao = conectar();
+             PreparedStatement comando = conexao.prepareStatement(sql)) {
+
+            if (comando.executeUpdate() != 6) {
+                throw new IllegalStateException("O seed V999 não está completo no banco.");
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException("Falha ao restaurar o estoque do seed em " + URL, e);
+        }
+    }
+
     // ------------------------------------------------------------
     // Troca (RF0041 a RF0045)
     // ------------------------------------------------------------

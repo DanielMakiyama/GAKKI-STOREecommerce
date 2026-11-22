@@ -85,14 +85,22 @@ public class PreferenciaCliente {
     @Column(name = "atualizado_em")
     private OffsetDateTime atualizadoEm;
 
+    // Mudar só uma coleção não altera a linha da tabela; marcar a data
+    // força o UPDATE, e o @UpdateTimestamp grava o horário.
     public void substituirCategorias(Set<Categoria> novas) {
-        categorias.clear();
-        categorias.addAll(novas);
+        if (!categorias.equals(novas)) {
+            categorias.clear();
+            categorias.addAll(novas);
+            atualizadoEm = OffsetDateTime.now();
+        }
     }
 
     public void substituirEstilos(Set<EstiloMusical> novos) {
-        estilos.clear();
-        estilos.addAll(novos);
+        if (!estilos.equals(novos)) {
+            estilos.clear();
+            estilos.addAll(novos);
+            atualizadoEm = OffsetDateTime.now();
+        }
     }
 
     @Override
