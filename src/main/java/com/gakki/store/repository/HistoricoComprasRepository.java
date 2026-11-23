@@ -49,6 +49,16 @@ public interface HistoricoComprasRepository extends Repository<Pedido, Long> {
     List<ItemComprado> itensDeTodosOsClientes(@Param("status") Collection<String> status,
                                               @Param("fuso") String fuso);
 
+    // Ajuste fino: todas as vendas até o corte (dados_ate) da versão do modelo.
+    @Query(value = SELECT_ITENS + """
+             WHERE p.status IN (:status)
+               AND p.criado_em <= :ate
+             ORDER BY p.cliente_id, p.criado_em, p.id, ip.id
+            """, nativeQuery = true)
+    List<ItemComprado> itensDeTodosOsClientesAte(@Param("status") Collection<String> status,
+                                                 @Param("fuso") String fuso,
+                                                 @Param("ate") OffsetDateTime ate);
+
     // Vendas posteriores ao corte da versão atual do modelo.
     @Query(value = """
             SELECT count(*) FROM pedido

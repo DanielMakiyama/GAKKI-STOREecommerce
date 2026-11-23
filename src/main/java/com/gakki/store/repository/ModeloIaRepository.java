@@ -16,6 +16,8 @@ public interface ModeloIaRepository extends JpaRepository<ModeloIa, Long> {
 
     Optional<ModeloIa> findTopByOrderByVersaoDesc();
 
+    Optional<ModeloIa> findByVersao(Integer versao);
+
     // Treinamentos em andamento, consultados periodicamente no provedor.
     List<ModeloIa> findByStatus(StatusModeloIa status);
 

@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -65,13 +66,27 @@ public class ContextoRecomendacaoService {
         Optional<PreferenciaCliente> preferencia = preferenciaRepository.findByClienteId(clienteId);
         List<ItemComprado> compras = historicoRepository.itensDoCliente(clienteId, STATUS_COMPRADO, FUSO_DA_LOJA);
         List<Instrumento> catalogo = instrumentoRepository.findAllByAtivoTrueOrderByNomeAsc();
+        return instrucoes(preferencia, compras, catalogo);
+    }
 
+    // Mesmo texto do chat, com o histórico que se quiser. O ajuste fino usa
+    // o histórico até a data de cada compra, e não o de hoje.
+    public String instrucoes(Optional<PreferenciaCliente> preferencia, List<ItemComprado> compras,
+                             List<Instrumento> catalogo) {
+        return instrucoes(preferencia, compras, catalogo, null);
+    }
+
+    // garantido: produto que precisa estar na lista de sugestões. O ajuste fino
+    // usa para o exemplo nunca contradizer a regra "escolha das SUGESTÕES".
+    public String instrucoes(Optional<PreferenciaCliente> preferencia, List<ItemComprado> compras,
+                             List<Instrumento> catalogo, Instrumento garantido) {
         // Parte igual para todos os clientes primeiro: o Ollama reaproveita o
         // que já leu, e só o trecho do cliente é processado a cada pergunta.
         return gerais(catalogo)
                 + "\nPREFERÊNCIAS DO CLIENTE:\n" + secaoPreferencias(preferencia)
                 + "\nJÁ COMPROU:\n" + secaoHistorico(compras)
-                + "\nSUGESTÕES PARA ESTE CLIENTE:\n" + secaoSugestoes(catalogo, preferencia, compras);
+                + "\nSUGESTÕES PARA ESTE CLIENTE:\n"
+                + secaoSugestoes(sugestoes(catalogo, preferencia, compras, garantido));
     }
 
     // Regras e catálogo, iguais para todos. O aquecimento da IA lê só isto.
@@ -118,25 +133,44 @@ public class ContextoRecomendacaoService {
                 .collect(Collectors.joining("; ", "", "\n"));
     }
 
-    // Filtro feito pelo sistema: em estoque, dentro do orçamento, nas categorias
-    // de interesse (ou nas do histórico) e ainda não comprado. Os mais caros
-    // primeiro, para os instrumentos aparecerem antes dos acessórios baratos.
-    String secaoSugestoes(List<Instrumento> catalogo, Optional<PreferenciaCliente> preferencia,
-                          List<ItemComprado> compras) {
+    // Filtro obrigatório: em estoque, ainda não comprado, dentro do orçamento e,
+    // se o cliente declarou categorias, em pelo menos uma delas. As categorias
+    // do histórico só ordenam (quem comprou guitarra pode querer um pedal).
+    // Empate: os mais caros primeiro, para instrumentos virem antes de acessórios.
+    List<Instrumento> candidatos(List<Instrumento> catalogo, Optional<PreferenciaCliente> preferencia,
+                                 List<ItemComprado> compras) {
         Set<String> comprados = compras.stream().map(ItemComprado::getCodigo).collect(Collectors.toSet());
+        Set<String> declaradas = preferencia
+                .map(p -> p.getCategorias().stream().map(Categoria::getNome).collect(Collectors.toSet()))
+                .orElse(Set.of());
         Set<String> interesse = categoriasDeInteresse(preferencia, compras);
         BigDecimal teto = preferencia.map(PreferenciaCliente::getOrcamentoMaximo).orElse(null);
 
-        List<Instrumento> sugestoes = catalogo.stream()
+        return catalogo.stream()
                 .filter(ContextoRecomendacaoService::temEstoque)
                 .filter(i -> !comprados.contains(i.getCodigo()))
                 .filter(i -> teto == null || i.getValorVenda().compareTo(teto) <= 0)
-                .filter(i -> interesse.isEmpty() || relevancia(i, interesse) > 0)
+                .filter(i -> declaradas.isEmpty() || i.getCategorias().stream().anyMatch(c -> declaradas.contains(c.getNome())))
                 .sorted(Comparator.comparing((Instrumento i) -> relevancia(i, interesse)).reversed()
                         .thenComparing(Instrumento::getValorVenda, Comparator.reverseOrder()))
-                .limit(MAXIMO_SUGESTOES)
                 .toList();
+    }
 
+    List<Instrumento> sugestoes(List<Instrumento> catalogo, Optional<PreferenciaCliente> preferencia,
+                                List<ItemComprado> compras, Instrumento garantido) {
+        List<Instrumento> todos = candidatos(catalogo, preferencia, compras);
+        List<Instrumento> topo = todos.stream().limit(MAXIMO_SUGESTOES).toList();
+        if (garantido == null || topo.contains(garantido) || !todos.contains(garantido)) {
+            return topo;
+        }
+        // Entra no lugar do último, mantendo a ordem da lista completa.
+        List<Instrumento> ajustada = new ArrayList<>(todos.subList(0, MAXIMO_SUGESTOES - 1));
+        ajustada.add(garantido);
+        ajustada.sort(Comparator.comparingInt(todos::indexOf));
+        return ajustada;
+    }
+
+    String secaoSugestoes(List<Instrumento> sugestoes) {
         if (sugestoes.isEmpty()) {
             return "Nenhuma sugestão automática; use o CATÁLOGO.\n";
         }
@@ -177,8 +211,8 @@ public class ContextoRecomendacaoService {
                 .collect(Collectors.toSet());
     }
 
-    // +1 por categoria de interesse, -1 por categoria fora dele (ex.: cordas de
-    // guitarra são "Acessórios" e "Guitarras"; para quem só quer acessórios, saem).
+    // Só ordena: +1 por categoria de interesse, -1 por categoria fora dele (ex.:
+    // para quem quer acessórios de gravação, cordas de guitarra ficam no fim).
     private static int relevancia(Instrumento instrumento, Set<String> interesse) {
         return instrumento.getCategorias().stream()
                 .mapToInt(c -> interesse.contains(c.getNome()) ? 1 : -1)
