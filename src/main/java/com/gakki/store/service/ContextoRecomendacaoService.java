@@ -99,6 +99,57 @@ public class ContextoRecomendacaoService {
         return REGRAS + "\nCATÁLOGO:\n" + secaoCatalogo(catalogo);
     }
 
+    // Descrição real dos produtos que a pergunta cita (cenário 5, dúvidas).
+    // Vai no fim do texto: não atrapalha o aproveitamento da parte comum.
+    @Transactional(readOnly = true)
+    public String detalhesDosCitados(String pergunta) {
+        return secaoDetalhes(citadosNaPergunta(pergunta, instrumentoRepository.findAllByAtivoTrueOrderByNomeAsc()));
+    }
+
+    String secaoDetalhes(List<Instrumento> produtos) {
+        if (produtos.isEmpty()) {
+            return "";
+        }
+        return produtos.stream()
+                .map(p -> "- [%s] %s, %s%s: %s".formatted(p.getCodigo(), p.getNome(), moeda(p.getValorVenda()),
+                        temEstoque(p) ? "" : " (esgotado)", p.getDescricao() == null ? "" : p.getDescricao().trim()))
+                .collect(Collectors.joining("\n", "\nDETALHES DOS PRODUTOS CITADOS (use estes dados para responder):\n", "\n"));
+    }
+
+    // Reconhece o produto pelo código, pelo nome completo ou pelo modelo
+    // ("DD-8", "TS9", "AT2020"), ignorando hífens e maiúsculas.
+    List<Instrumento> citadosNaPergunta(String pergunta, List<Instrumento> catalogo) {
+        String texto = normalizar(pergunta);
+        return catalogo.stream()
+                .filter(produto -> chaves(produto).stream().anyMatch(texto::contains))
+                .limit(3)
+                .toList();
+    }
+
+    private static List<String> chaves(Instrumento produto) {
+        List<String> chaves = new ArrayList<>(List.of(normalizar(produto.getCodigo()), normalizar(produto.getNome())));
+        String[] palavras = Arrays.stream(produto.getNome().split("\\s+"))
+                .map(ContextoRecomendacaoService::normalizar).toArray(String[]::new);
+
+        for (int i = 1; i < palavras.length; i++) {
+            String palavra = palavras[i];
+            // Modelo com número: "dd8", "ts9", "at2020".
+            if (palavra.length() >= 3 && palavra.chars().anyMatch(Character::isDigit)
+                    && palavra.chars().anyMatch(Character::isLetter)) {
+                chaves.add(palavra);
+            }
+            // Par de palavras depois da categoria: "scarlett solo", "tube screamer".
+            if (i + 1 < palavras.length && palavra.length() >= 3 && palavras[i + 1].length() >= 3) {
+                chaves.add(palavra + " " + palavras[i + 1]);
+            }
+        }
+        return chaves;
+    }
+
+    private static String normalizar(String texto) {
+        return texto == null ? "" : texto.toLowerCase(Locale.ROOT).replace("-", "");
+    }
+
     String secaoPreferencias(Optional<PreferenciaCliente> preferencia) {
         if (preferencia.isEmpty()) {
             return "O cliente ainda não informou preferências.\n";

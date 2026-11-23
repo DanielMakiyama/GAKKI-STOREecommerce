@@ -39,7 +39,12 @@ public class AssistenteIaService {
 
     // Usado pelo chat. Vazio quando a IA não respondeu; quem chama decide o que mostrar.
     public Optional<RespostaIa> responder(Long clienteId, List<MensagemIa> anteriores, String pergunta) {
-        return conversar(contextoService.instrucoesDoSistema(clienteId), anteriores, pergunta);
+        return conversar(instrucoesPara(clienteId, pergunta), anteriores, pergunta);
+    }
+
+    // Contexto do cliente mais a descrição real dos produtos que a pergunta cita.
+    private String instrucoesPara(Long clienteId, String pergunta) {
+        return contextoService.instrucoesDoSistema(clienteId) + contextoService.detalhesDosCitados(pergunta);
     }
 
     // Administrador pergunta em nome de um cliente e vê o contexto enviado.
@@ -49,7 +54,7 @@ public class AssistenteIaService {
                         "Nenhum cliente com o e-mail " + requisicao.email() + "."))
                 .getId();
 
-        String instrucoes = contextoService.instrucoesDoSistema(clienteId);
+        String instrucoes = instrucoesPara(clienteId, requisicao.pergunta());
         long inicio = System.currentTimeMillis();
 
         RespostaIa resposta = conversar(instrucoes, List.of(), requisicao.pergunta())

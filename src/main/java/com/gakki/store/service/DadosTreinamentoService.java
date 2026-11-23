@@ -176,10 +176,13 @@ public class DadosTreinamentoService {
                 continue; // sem pergunta do cliente logo antes, não há o que ensinar
             }
 
+            // Mesmo contexto do chat, inclusive os detalhes dos produtos que a pergunta cita.
             Long clienteId = resposta.getConversa().getCliente().getId();
+            String pergunta = conversa.get(posicao - 1).getTexto();
             List<MensagemIa> mensagens = new ArrayList<>();
             mensagens.add(MensagemIa.sistema(contextoService.instrucoes(
-                    preferenciaDe.apply(clienteId), comprasPorCliente.getOrDefault(clienteId, List.of()), catalogo)));
+                    preferenciaDe.apply(clienteId), comprasPorCliente.getOrDefault(clienteId, List.of()), catalogo)
+                    + contextoService.secaoDetalhes(contextoService.citadosNaPergunta(pergunta, catalogo))));
             conversa.subList(Math.max(0, posicao - 1 - MENSAGENS_ANTERIORES), posicao).forEach(m ->
                     mensagens.add(m.ehDoAssistente() ? MensagemIa.assistente(m.getTexto()) : MensagemIa.usuario(m.getTexto())));
             mensagens.add(MensagemIa.assistente(resposta.getTexto()));
@@ -188,16 +191,27 @@ public class DadosTreinamentoService {
         return exemplos;
     }
 
-    // Uma pergunta por produto, respondida com a descrição: é aqui que o modelo
-    // aprende para que serve cada item, o que não cabe no contexto de cada pergunta.
+    // Três perguntas por produto, respondidas com a descrição. A primeira vem
+    // sem os detalhes no contexto (o modelo guarda o conteúdo); as outras duas
+    // com a seção de detalhes, como o chat envia (o modelo aprende a usá-la).
     private List<Exemplo> doCatalogo(List<Instrumento> catalogo) {
         String sistema = contextoService.instrucoes(Optional.empty(), List.of(), catalogo);
-        return catalogo.stream()
-                .map(produto -> new Exemplo(Origem.CATALOGO, List.of(
-                        MensagemIa.sistema(sistema),
-                        MensagemIa.usuario("O que você sabe sobre " + artigo(produto) + " " + produto.getNome() + "?"),
-                        MensagemIa.assistente(descricaoCompleta(produto)))))
-                .toList();
+        List<Exemplo> exemplos = new ArrayList<>();
+        for (Instrumento produto : catalogo) {
+            String nome = artigo(produto) + " " + produto.getNome();
+            String detalhes = contextoService.secaoDetalhes(List.of(produto));
+            exemplos.add(deCatalogo(sistema, "O que você sabe sobre " + nome + "?", produto));
+            exemplos.add(deCatalogo(sistema + detalhes, "Para que serve " + nome + "?", produto));
+            exemplos.add(deCatalogo(sistema + detalhes, "Me fale sobre " + nome + ".", produto));
+        }
+        return exemplos;
+    }
+
+    private static Exemplo deCatalogo(String sistema, String pergunta, Instrumento produto) {
+        return new Exemplo(Origem.CATALOGO, List.of(
+                MensagemIa.sistema(sistema),
+                MensagemIa.usuario(pergunta),
+                MensagemIa.assistente(descricaoCompleta(produto))));
     }
 
     private static String pergunta(int indice, Instrumento produto) {
