@@ -79,11 +79,16 @@ gakki:
     # 0 = só processador. Placas de vídeo antigas (ex.: AMD R9) geram texto corrompido.
     num-gpu: ${IA_NUM_GPU:0}
     # Janela de contexto em tokens: regras + catálogo + histórico + conversa.
-    num-ctx: ${IA_NUM_CTX:8192}
+    num-ctx: ${IA_NUM_CTX:4096}
+    # Tamanho máximo da resposta em tokens (cerca de 4 frases).
+    max-tokens: ${IA_MAX_TOKENS:220}
     temperatura: 0.3
+    # Ao subir o backend, carrega o modelo e o catálogo antes da primeira pergunta.
+    aquecer-na-inicializacao: ${IA_AQUECER:true}
     # Mantém o modelo na memória entre perguntas, evitando recarregar a cada uma.
     keep-alive: 30m
-    timeout: ${IA_TIMEOUT:PT120S}
+    # A primeira pergunta inclui carregar o modelo e ler o catálogo.
+    timeout: ${IA_TIMEOUT:PT180S}
 
 logging:
   level:

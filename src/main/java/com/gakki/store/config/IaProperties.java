@@ -11,7 +11,9 @@ public record IaProperties(
         String modeloBase,
         Integer numGpu,
         Integer numCtx,
+        Integer maxTokens,
         Double temperatura,
         String keepAlive,
-        Duration timeout) {
+        Duration timeout,
+        boolean aquecerNaInicializacao) {
 }

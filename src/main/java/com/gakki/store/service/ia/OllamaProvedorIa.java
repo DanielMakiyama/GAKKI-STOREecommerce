@@ -27,13 +27,13 @@ public class OllamaProvedorIa implements ProvedorIa {
     }
 
     @Override
-    public String conversar(String modelo, List<MensagemIa> mensagens) {
+    public String conversar(String modelo, List<MensagemIa> mensagens, int limiteTokens) {
         PedidoChat pedido = new PedidoChat(
                 modelo,
                 mensagens.stream().map(OllamaProvedorIa::paraOllama).toList(),
                 false,
                 propriedades.keepAlive(),
-                new Opcoes(propriedades.numGpu(), propriedades.numCtx(), propriedades.temperatura()));
+                new Opcoes(propriedades.numGpu(), propriedades.numCtx(), limiteTokens, propriedades.temperatura()));
 
         RespostaChat resposta;
         try {
@@ -87,6 +87,7 @@ public class OllamaProvedorIa implements ProvedorIa {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     record Opcoes(@JsonProperty("num_gpu") Integer numGpu,
                   @JsonProperty("num_ctx") Integer numCtx,
+                  @JsonProperty("num_predict") Integer numPredict,
                   Double temperature) {
     }
 

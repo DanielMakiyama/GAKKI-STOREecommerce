@@ -8,8 +8,9 @@ public interface ProvedorIa {
 
     String nome();
 
-    // Devolve o texto da resposta. Lança IaIndisponivelException se falhar.
-    String conversar(String modelo, List<MensagemIa> mensagens);
+    // Devolve o texto da resposta, com no máximo limiteTokens tokens.
+    // Lança IaIndisponivelException se falhar.
+    String conversar(String modelo, List<MensagemIa> mensagens, int limiteTokens);
 
     // Modelos que o provedor tem prontos para uso.
     List<String> modelosInstalados();

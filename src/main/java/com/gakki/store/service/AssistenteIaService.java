@@ -89,6 +89,22 @@ public class AssistenteIaService {
                 instalados);
     }
 
+    // Carrega o modelo e faz a IA ler regras e catálogo, gerando só 1 token.
+    // A primeira pergunta de um cliente passa a processar apenas o trecho dele.
+    public void aquecer() {
+        String modelo = modeloIaRepository.findByAtivoTrue()
+                .map(ModeloIa::getIdentificador).orElse(propriedades.modeloBase());
+        long inicio = System.currentTimeMillis();
+        try {
+            provedorIa.conversar(modelo, List.of(
+                    MensagemIa.sistema(contextoService.instrucoesGerais()),
+                    MensagemIa.usuario("Olá")), 1);
+            log.info("IA aquecida (modelo {}) em {} s", modelo, (System.currentTimeMillis() - inicio) / 1000);
+        } catch (IaIndisponivelException e) {
+            log.warn("Não foi possível aquecer a IA (modelo {}): {}", modelo, e.getMessage());
+        }
+    }
+
     private Optional<RespostaIa> conversar(String instrucoes, List<MensagemIa> anteriores, String pergunta) {
         ModeloIa ativo = modeloIaRepository.findByAtivoTrue().orElse(null);
         String modelo = ativo != null ? ativo.getIdentificador() : propriedades.modeloBase();
@@ -99,9 +115,11 @@ public class AssistenteIaService {
         mensagens.add(MensagemIa.usuario(pergunta));
 
         try {
-            return Optional.of(new RespostaIa(provedorIa.conversar(modelo, mensagens), modelo, ativo));
+            String texto = provedorIa.conversar(modelo, mensagens, propriedades.maxTokens());
+            return Optional.of(new RespostaIa(texto, modelo, ativo));
         } catch (IaIndisponivelException e) {
-            log.warn("IA indisponível (modelo {}): {}", modelo, e.getMessage());
+            log.warn("IA indisponível (modelo {}): {} | causa: {}", modelo, e.getMessage(),
+                    e.getCause() == null ? "-" : e.getCause().toString());
             return Optional.empty();
         }
     }

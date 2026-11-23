@@ -15,14 +15,20 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
-// RNF0044 — monta as instruções de sistema da IA: regras, preferências,
-// histórico de compras e catálogo. O ajuste fino (etapa 6) usa o mesmo
-// formato, para o modelo treinar com o que vai receber no chat.
+// RNF0044 — monta as instruções de sistema da IA. O backend filtra (estoque,
+// orçamento, categorias, o que já foi comprado) e a IA só escolhe e explica:
+// modelo pequeno erra menos quando não precisa filtrar sozinho.
+// O ajuste fino (etapa 6) usa o mesmo formato.
 
 @Service
 @RequiredArgsConstructor
@@ -34,20 +40,20 @@ public class ContextoRecomendacaoService {
 
     static final String FUSO_DA_LOJA = "America/Sao_Paulo";
 
+    private static final int MAXIMO_SUGESTOES = 8;
+
     private static final Locale PT_BR = Locale.of("pt", "BR");
 
+    // Poucas regras e um exemplo: modelos pequenos imitam melhor do que obedecem listas.
     private static final String REGRAS = """
-            Você é o assistente de compras da GAKKI STORE, loja online de instrumentos musicais.
-            Responda sempre em português do Brasil, de forma cordial e curta (até 5 frases).
-
+            Você é o assistente de compras da GAKKI STORE, loja de instrumentos musicais.
+            Responda em português do Brasil, com cordialidade, em até 3 frases.
             Regras:
-            1. Recomende somente produtos do CATÁLOGO abaixo. Nunca invente produtos, preços, prazos ou promoções.
-            2. Ao citar um produto, escreva o nome e o código entre colchetes. Exemplo: Guitarra Squier Stratocaster [INST-0007].
-            3. Use as PREFERÊNCIAS e o HISTÓRICO DE COMPRAS para personalizar e diga em uma frase por que o produto combina com o cliente.
-            4. Não recomende de novo o que o cliente já comprou, exceto itens de reposição, como cordas e palhetas.
-            5. Respeite o orçamento máximo do cliente, quando houver.
-            6. Prefira produtos em estoque; se citar um esgotado, avise.
-            7. Se a pergunta não for sobre música, instrumentos ou a loja, diga gentilmente que só ajuda com esses assuntos.
+            1. Fale só de produtos do CATÁLOGO, com o código entre colchetes. Não invente produtos nem preços.
+            2. Para recomendar, escolha UM produto das SUGESTÕES PARA ESTE CLIENTE e diga em uma frase por que combina com ele.
+            3. Fora de música e da loja, diga que só ajuda com esses assuntos.
+            Exemplo de recomendação:
+            Recomendo o Pedal Ibanez TS9 Tube Screamer [INST-0023], por R$ 840,00. Ele combina com o seu blues rock e soma bem ao pedal de distorção que você já tem.
             """;
 
     private final PreferenciaClienteRepository preferenciaRepository;
@@ -60,10 +66,22 @@ public class ContextoRecomendacaoService {
         List<ItemComprado> compras = historicoRepository.itensDoCliente(clienteId, STATUS_COMPRADO, FUSO_DA_LOJA);
         List<Instrumento> catalogo = instrumentoRepository.findAllByAtivoTrueOrderByNomeAsc();
 
-        return REGRAS
+        // Parte igual para todos os clientes primeiro: o Ollama reaproveita o
+        // que já leu, e só o trecho do cliente é processado a cada pergunta.
+        return gerais(catalogo)
                 + "\nPREFERÊNCIAS DO CLIENTE:\n" + secaoPreferencias(preferencia)
-                + "\nHISTÓRICO DE COMPRAS:\n" + secaoHistorico(compras)
-                + "\nCATÁLOGO (código | produto | marca | categorias | preço | estoque):\n" + secaoCatalogo(catalogo);
+                + "\nJÁ COMPROU:\n" + secaoHistorico(compras)
+                + "\nSUGESTÕES PARA ESTE CLIENTE:\n" + secaoSugestoes(catalogo, preferencia, compras);
+    }
+
+    // Regras e catálogo, iguais para todos. O aquecimento da IA lê só isto.
+    @Transactional(readOnly = true)
+    public String instrucoesGerais() {
+        return gerais(instrumentoRepository.findAllByAtivoTrueOrderByNomeAsc());
+    }
+
+    private String gerais(List<Instrumento> catalogo) {
+        return REGRAS + "\nCATÁLOGO:\n" + secaoCatalogo(catalogo);
     }
 
     String secaoPreferencias(Optional<PreferenciaCliente> preferencia) {
@@ -89,29 +107,92 @@ public class ContextoRecomendacaoService {
         return texto.toString();
     }
 
+    // Só os nomes, sem repetir: é o que a IA usa para "combina com o que você já tem".
     String secaoHistorico(List<ItemComprado> compras) {
         if (compras.isEmpty()) {
-            return "O cliente ainda não fez compras.\n";
+            return "Nada ainda.\n";
         }
         return compras.stream()
-                .map(item -> "- %s: %s [%s] (%s), %d un., %s".formatted(
-                        item.getData(), item.getNome(), item.getCodigo(), item.getCategorias(),
-                        item.getQuantidade(), moeda(item.getValorUnitario())))
+                .map(item -> "[" + item.getCodigo() + "] " + item.getNome())
+                .distinct()
+                .collect(Collectors.joining("; ", "", "\n"));
+    }
+
+    // Filtro feito pelo sistema: em estoque, dentro do orçamento, nas categorias
+    // de interesse (ou nas do histórico) e ainda não comprado. Os mais caros
+    // primeiro, para os instrumentos aparecerem antes dos acessórios baratos.
+    String secaoSugestoes(List<Instrumento> catalogo, Optional<PreferenciaCliente> preferencia,
+                          List<ItemComprado> compras) {
+        Set<String> comprados = compras.stream().map(ItemComprado::getCodigo).collect(Collectors.toSet());
+        Set<String> interesse = categoriasDeInteresse(preferencia, compras);
+        BigDecimal teto = preferencia.map(PreferenciaCliente::getOrcamentoMaximo).orElse(null);
+
+        List<Instrumento> sugestoes = catalogo.stream()
+                .filter(ContextoRecomendacaoService::temEstoque)
+                .filter(i -> !comprados.contains(i.getCodigo()))
+                .filter(i -> teto == null || i.getValorVenda().compareTo(teto) <= 0)
+                .filter(i -> interesse.isEmpty() || relevancia(i, interesse) > 0)
+                .sorted(Comparator.comparing((Instrumento i) -> relevancia(i, interesse)).reversed()
+                        .thenComparing(Instrumento::getValorVenda, Comparator.reverseOrder()))
+                .limit(MAXIMO_SUGESTOES)
+                .toList();
+
+        if (sugestoes.isEmpty()) {
+            return "Nenhuma sugestão automática; use o CATÁLOGO.\n";
+        }
+        return sugestoes.stream()
+                .map(i -> "- [%s] %s, %s".formatted(i.getCodigo(), i.getNome(), moeda(i.getValorVenda())))
                 .collect(Collectors.joining("\n", "", "\n"));
     }
 
+    // Agrupado pela primeira categoria do produto, uma linha curta por item.
     String secaoCatalogo(List<Instrumento> catalogo) {
-        return catalogo.stream()
-                .map(instrumento -> {
-                    Integer estoque = instrumento.getQuantidadeEstoque();
-                    String categorias = instrumento.getCategorias().stream()
-                            .map(Categoria::getNome).sorted().collect(Collectors.joining(", "));
-                    return "[%s] | %s | %s | %s | %s | %s".formatted(
-                            instrumento.getCodigo(), instrumento.getNome(), instrumento.getFabricante().getNome(),
-                            categorias, moeda(instrumento.getValorVenda()),
-                            estoque != null && estoque > 0 ? "em estoque" : "esgotado");
-                })
-                .collect(Collectors.joining("\n", "", "\n"));
+        Map<String, List<Instrumento>> porCategoria = catalogo.stream()
+                .collect(Collectors.groupingBy(ContextoRecomendacaoService::categoriaPrincipal,
+                        TreeMap::new, Collectors.toList()));
+
+        StringBuilder texto = new StringBuilder();
+        porCategoria.forEach((categoria, itens) -> {
+            texto.append(categoria).append(":\n");
+            itens.forEach(instrumento -> texto.append("- [").append(instrumento.getCodigo()).append("] ")
+                    .append(instrumento.getNome()).append(", ")
+                    .append(moeda(instrumento.getValorVenda()))
+                    .append(temEstoque(instrumento) ? "" : " (esgotado)")
+                    .append('\n'));
+        });
+        return texto.toString();
+    }
+
+    private static Set<String> categoriasDeInteresse(Optional<PreferenciaCliente> preferencia,
+                                                     List<ItemComprado> compras) {
+        Set<String> daPreferencia = preferencia
+                .map(p -> p.getCategorias().stream().map(Categoria::getNome).collect(Collectors.toSet()))
+                .orElse(Set.of());
+        if (!daPreferencia.isEmpty()) {
+            return daPreferencia;
+        }
+        return compras.stream()
+                .filter(item -> item.getCategorias() != null)
+                .flatMap(item -> Arrays.stream(item.getCategorias().split(",\\s*")))
+                .collect(Collectors.toSet());
+    }
+
+    // +1 por categoria de interesse, -1 por categoria fora dele (ex.: cordas de
+    // guitarra são "Acessórios" e "Guitarras"; para quem só quer acessórios, saem).
+    private static int relevancia(Instrumento instrumento, Set<String> interesse) {
+        return instrumento.getCategorias().stream()
+                .mapToInt(c -> interesse.contains(c.getNome()) ? 1 : -1)
+                .sum();
+    }
+
+    private static boolean temEstoque(Instrumento instrumento) {
+        Integer estoque = instrumento.getQuantidadeEstoque();
+        return estoque != null && estoque > 0;
+    }
+
+    private static String categoriaPrincipal(Instrumento instrumento) {
+        return instrumento.getCategorias().stream()
+                .map(Categoria::getNome).sorted().findFirst().orElse("Outros");
     }
 
     private static String moeda(BigDecimal valor) {
