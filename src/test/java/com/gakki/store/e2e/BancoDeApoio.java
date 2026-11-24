@@ -451,6 +451,105 @@ public final class BancoDeApoio {
         }
     }
 
+    // ------------------------------------------------------------
+    // Chatbot (RNF0044)
+    // ------------------------------------------------------------
+
+    // Conversa nova (a mais recente do cliente) com uma pergunta e uma resposta
+    // prontas: o teste de avaliação não depende da IA, que é lenta e varia.
+    // Devolve o id da resposta do assistente.
+    public static long criarConversaComResposta(String emailCliente, String pergunta, String resposta) {
+        String sql = """
+                WITH cli AS (
+                    SELECT c.id FROM cliente c JOIN usuario u ON u.id = c.usuario_id WHERE u.email = ?
+                ), conv AS (
+                    INSERT INTO conversa_chat (cliente_id, iniciada_em)
+                    SELECT id, now() FROM cli RETURNING id
+                ), perg AS (
+                    INSERT INTO mensagem_chat (conversa_id, autor, texto, criado_em)
+                    SELECT id, 'CLIENTE', ?, now() FROM conv RETURNING conversa_id
+                )
+                INSERT INTO mensagem_chat (conversa_id, autor, texto, criado_em)
+                SELECT conversa_id, 'ASSISTENTE', ?, now() + interval '1 second' FROM perg
+                RETURNING id""";
+
+        try (Connection conexao = conectar();
+             PreparedStatement comando = conexao.prepareStatement(sql)) {
+
+            comando.setString(1, emailCliente);
+            comando.setString(2, pergunta);
+            comando.setString(3, resposta);
+            try (ResultSet r = comando.executeQuery()) {
+                if (!r.next()) {
+                    throw new IllegalStateException("Cliente não encontrado: " + emailCliente);
+                }
+                return r.getLong(1);
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException("Falha ao criar conversa de teste em " + URL, e);
+        }
+    }
+
+    // UTIL, NAO_UTIL ou null se a resposta ainda não foi avaliada.
+    public static String avaliacaoDaResposta(long mensagemId) {
+        return umCampoDoFeedback(mensagemId, "avaliacao", String.class);
+    }
+
+    // Preenchido só quando o cliente troca a avaliação.
+    public static boolean avaliacaoFoiAlterada(long mensagemId) {
+        return umCampoDoFeedback(mensagemId, "atualizado_em", OffsetDateTime.class) != null;
+    }
+
+    private static <T> T umCampoDoFeedback(long mensagemId, String coluna, Class<T> tipo) {
+        String sql = "SELECT " + coluna + " FROM feedback_resposta WHERE mensagem_id = ?";
+
+        try (Connection conexao = conectar();
+             PreparedStatement comando = conexao.prepareStatement(sql)) {
+
+            comando.setLong(1, mensagemId);
+            try (ResultSet r = comando.executeQuery()) {
+                return r.next() ? r.getObject(1, tipo) : null;
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException("Falha ao ler o feedback em " + URL, e);
+        }
+    }
+
+    // Apaga a conversa da mensagem, com as mensagens e o feedback, para não
+    // sujar o histórico do cliente nem os dados do ajuste fino.
+    public static void apagarConversaDaMensagem(long mensagemId) {
+        List<String> comandos = List.of(
+                "DELETE FROM feedback_resposta WHERE mensagem_id IN (SELECT id FROM mensagem_chat WHERE conversa_id = ?)",
+                "DELETE FROM mensagem_chat WHERE conversa_id = ?",
+                "DELETE FROM conversa_chat WHERE id = ?");
+
+        try (Connection conexao = conectar()) {
+            Long conversaId = null;
+            try (PreparedStatement busca = conexao.prepareStatement("SELECT conversa_id FROM mensagem_chat WHERE id = ?")) {
+                busca.setLong(1, mensagemId);
+                try (ResultSet r = busca.executeQuery()) {
+                    if (r.next()) {
+                        conversaId = r.getLong(1);
+                    }
+                }
+            }
+            if (conversaId == null) {
+                return;
+            }
+
+            conexao.setAutoCommit(false);
+            for (String sql : comandos) {
+                try (PreparedStatement comando = conexao.prepareStatement(sql)) {
+                    comando.setLong(1, conversaId);
+                    comando.executeUpdate();
+                }
+            }
+            conexao.commit();
+        } catch (Exception e) {
+            throw new IllegalStateException("Falha ao apagar a conversa de teste em " + URL, e);
+        }
+    }
+
     private static Connection conectar() throws Exception {
         return DriverManager.getConnection(URL, USUARIO, SENHA);
     }
