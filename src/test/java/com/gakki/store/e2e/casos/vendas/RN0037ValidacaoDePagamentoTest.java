@@ -10,22 +10,8 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/**
- * Validação do pagamento e baixa em estoque —
- * RN0037, RN0038, RF0053 e RN0028.
- *
- * <p>A operadora de cartão é simulada, como o próprio DRS autoriza em
- * nota de rodapé. O critério de recusa é o final do cartão, parametrizado
- * em {@code gakki.pagamento.digitos-recusados} (0000 por padrão):
- * determinístico, e acionável pela tela, porque é o cliente quem cadastra
- * o cartão.
- *
- * <p>A baixa em estoque é consequência da aprovação, não da finalização
- * (RN0028): entre finalizar e a operadora responder a mercadoria fica
- * bloqueada, mas o estoque só é debitado quando o pagamento é aprovado.
- * Os dois casos abaixo são o par que prova isso — um aprovado que debita
- * e um reprovado que não.
- */
+// Validação do pagamento e baixa em estoque — RN0037, RN0038, RF0053 e RN0028.
+
 class RN0037ValidacaoDePagamentoTest extends BaseVendasE2ETest {
 
     /** O final que o {@code OperadoraDeCartao} recusa, por parâmetro. */

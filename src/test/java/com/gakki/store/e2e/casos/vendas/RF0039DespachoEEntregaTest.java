@@ -11,21 +11,8 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Acompanhamento, despacho e entrega pelo administrador —
- * RF0039, RF0040, RN0039 e RN0040.
- *
- * <p>Este é o caso que percorre o ciclo inteiro <b>pela tela do
- * administrador</b>, e não pela API: o painel é o que vai ser
- * demonstrado, e foi exatamente aqui que o protótipo quebrava — o mapa
- * de ações usava três status que não existem no sistema
- * ({@code EM_ABERTO}, {@code PAGAMENTO_REALIZADO}, {@code EM_TRANSITO}),
- * então o fluxo morria logo depois da confirmação do pagamento.
- *
- * <p>O status é lido do atributo {@code data-status} do cartão, e não do
- * texto da tag: {@code .status-tag} tem {@code text-transform: uppercase}
- * no CSS, então o texto renderizado não é o valor do enum.
- */
+// Acompanhamento, despacho e entrega pelo administrador — RF0039, RF0040, RN0039 e RN0040.
+
 class RF0039DespachoEEntregaTest extends BaseVendasE2ETest {
 
     @Test
@@ -86,12 +73,6 @@ class RF0039DespachoEEntregaTest extends BaseVendasE2ETest {
         BancoDeApoio.reporEstoque(PEDAL, 1);
     }
 
-    /**
-     * Clica na próxima ação do pedido e espera o status mudar.
-     *
-     * <p>Esperar o atributo, e não dormir: a tela recarrega a lista
-     * depois do POST, e afirmar antes disso leria o status antigo.
-     */
     private void avancarEEsperar(String numero, String statusEsperado) {
         clicar(PaginaAdminVendas.acaoDoPedido(numero));
         esperarAtributo(PaginaAdminVendas.pedidoDeNumero(numero), "data-status", statusEsperado);

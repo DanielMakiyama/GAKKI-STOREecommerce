@@ -16,24 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Processo de troca, da solicitação ao cupom —
- * RF0041 a RF0045, RN0041 a RN0043, RN0046.
- *
- * <p>Os três estados são os do DRS: {@code EM_TROCA},
- * {@code TROCA_AUTORIZADA}, {@code TROCADO}. O protótipo trabalhava com
- * seis, e nenhum dos nomes antigos existe mais — nem na tela, nem no
- * enum, nem no CHECK da tabela.
- *
- * <p>Não há caso de recusa porque não há recusa: a RF0042 descreve só o
- * caminho da autorização, e o DRS não prevê estado nem regra para a
- * negativa. A lacuna está registrada na seção 16.2 da Especificação de
- * Caso de Uso — um caso aqui estaria testando requisito inventado.
- *
- * <p>Levar o pedido até ENTREGUE é preparo feito pela API: a RN0043 é a
- * porta de entrada da troca, e o despacho tem os seus próprios casos em
- * {@code RF0039DespachoEEntregaTest}, onde cada passo é dado pela tela.
- */
+// Processo de troca, da solicitação ao cupom — RF0041 a RF0045, RN0041 a RN0043, RN0046.
 class RF0041TrocaTest extends BaseVendasE2ETest {
 
     @Test

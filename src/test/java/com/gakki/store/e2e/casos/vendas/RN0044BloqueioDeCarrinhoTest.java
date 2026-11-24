@@ -14,21 +14,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Bloqueio temporário do item no carrinho e sua expiração —
- * RN0044, RN0045 e RNF0042.
- *
- * <p>O prazo é parametrizado ({@code gakki.carrinho.prazo-bloqueio}) e
- * vale 15 minutos na demonstração. Nenhum caso aqui espera o relógio:
- * o {@code BancoDeApoio} põe {@code bloqueado_ate} no passado, que é o
- * mesmo estado que o tempo produziria. Quem decide que o prazo venceu
- * continua sendo o backend, no acesso seguinte ao carrinho — o caminho
- * de produção roda inteiro, só o relógio é adiantado.
- *
- * <p>Nenhuma asserção fixa "15 minutos": o prazo é parâmetro, e um caso
- * que o afirmasse ficaria vermelho na demonstração, onde ele é reduzido
- * para alguns segundos justamente para a expiração ser visível.
- */
+// Bloqueio temporário do item no carrinho e sua expiração — RN0044, RN0045 e RNF0042.
+
 class RN0044BloqueioDeCarrinhoTest extends BaseVendasE2ETest {
 
     @Test

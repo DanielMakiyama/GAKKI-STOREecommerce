@@ -24,7 +24,6 @@ class RN0036CupomDeTrocoTest extends BaseVendasE2ETest {
     void usoDeCuponsGeraCupomDeTrocoPelaDiferenca() {
         // Os valores do exemplo do DRS: 40 + 35 numa compra de 50.
         // Conjunto mínimo, porque 75 - 35 = 40 < 50 — usar também um
-        // terceiro cupom seria recusado como desnecessário.
         String deQuarenta = BancoDeApoio.criarCupomDeTroca(new BigDecimal("40.00"));
         String deTrintaECinco = BancoDeApoio.criarCupomDeTroca(new BigDecimal("35.00"));
 
